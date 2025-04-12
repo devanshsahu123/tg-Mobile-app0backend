@@ -34,11 +34,12 @@ const fetchUrl = async(req, res) => {
         const bodyValidation = teleJoiValidation.submitUrl.validate(req.query);
        if(bodyValidation.error) throw new Error('Invalid Group URL !');
 
+  
+        req.query.url=  `https://telegram.me/${req.query.url.split('t.me/')[1]}`
+        console.log(req.query.url);
         const getData = await fetchTgGroupByUrl(req.query.url);
-        if(!getData.status) throw new Error('something want wrong !');
+        if(!getData.status) throw new Error('No Group Exist!');
         delete getData.status;
-
-
        return res.status(200).send({
         status:200,
         message:"success",
@@ -56,23 +57,22 @@ const addGorup = async(req, res) => {
     try {
         const { error, value } = teleJoiValidation.addGroup.validate(req.body);
         if (error) throw new Error('Invalid Group Data! Try Again');
-
         const isGroupExist =await tgGroupModel.findOne({
                 url:value.url
         }).select('name');
 
         if (isGroupExist) throw new Error(`${isGroupExist.name} Group already Exist !`);
-        const getData = await fetchTgGroupByUrl(value.url);
-        console.log(getData);
-        if (!getData.status) throw new Error('something want wrong !');
-        delete getData.status;
+        // const getData = await fetchTgGroupByUrl(value.url);
+        // console.log(getData);
+        // if (!getData.status) throw new Error('something want wrong !');
+        // delete getData.status;
 
         const createGroup = new tgGroupModel({
             userKey: value.userKey,
-            url:value.url,
-            name: getData?.name || value.name,
-            image:getData?.image || value.image,
-            category: value.category || 'trending',
+            url:`https://telegram.me/${value.url.split('t.me/')[1]}`,
+            name: value.name,
+            image: value.image,
+            category: value.category || 'latest',
             description: value.description
         });
 
@@ -100,7 +100,7 @@ const myGroups = async(req,res)=>{
 
         const myGroups = await tgGroupModel.find({
             userKey: value.userKey,
-        }).select('_id name category views status image').sort({ createdAt: -1 });
+        }).select('_id name category views status image url').sort({ createdAt: -1 });
 
         return res.status(200).send({
             status: 200,
@@ -120,11 +120,17 @@ const getGroups = async (req, res) => {
     try {
         const { error, value } = teleJoiValidation.getGroups.validate(req.query);
         if (error) throw new Error('Invalid user Key !');
-
-        const getGroups = await tgGroupModel.find({
-            category: value.category,
-            status:1
-        }).select('_id url name image category views');
+        let getGroups;
+        if (value.category = 'all'){
+            getGroups = await tgGroupModel.find({
+                status: 1
+            }).select('_id url name image category views').sort({ createdAt: -1 });
+        }else{
+             getGroups = await tgGroupModel.find({
+                category: value.category,
+                status:1
+             }).select('_id url name image category views').sort({ createdAt: -1 });
+        }
         return res.status(200).send({
             status: 200,
             message: "success",
@@ -138,6 +144,29 @@ const getGroups = async (req, res) => {
         });
     }
 }
+
+const increaseViews = async (req, res) => {
+  try {
+    const { groupId } = req.body;
+
+    await tgGroupModel.findByIdAndUpdate(
+      groupId,
+      { $inc: { views: 1 } }
+    );
+
+    return res.status(200).send({
+      status: 200,
+      message: 'View count increased successfully',
+    });
+    
+  } catch (error) {
+    console.log('Error in increaseViews:', error);
+    return res.status(500).send({
+      status: 500,
+      message: 'Something went wrong',
+    });
+  }
+};
 
 const getGroupsForAdmin = async (req, res) => {
     try {
@@ -187,5 +216,5 @@ const approveGroup = async (req,res) =>{
 
 
 module.exports = {
-    fetchUrl, addGorup, myGroups, getGroups, getGroupsForAdmin, approveGroup
+    fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin, approveGroup
 }

@@ -17,7 +17,7 @@ class teleJoiValidation {
         userKey: Joi.string().required().label('User Key')
     });
     static getGroups = Joi.object({
-        category: Joi.string().required().allow('latest', 'games', 'dating', 'funny', 'education', 'friendship', 'videos', 'entertainment', 'sports', 'travels', 'foods', 'business', 'news', 'medical', 'technology','movies').label('User Key')
+        category: Joi.string().required().allow('all','latest', 'games', 'dating', 'funny', 'education', 'friendship', 'videos', 'entertainment', 'sports', 'travels', 'foods', 'business', 'news', 'medical', 'technology','movies').label('User Key')
     });
 
     static getGroupsForAdmin = Joi.object({
