@@ -120,8 +120,9 @@ const getGroups = async (req, res) => {
     try {
         const { error, value } = teleJoiValidation.getGroups.validate(req.query);
         if (error) throw new Error('Invalid user Key !');
+
         let getGroups;
-        if (value.category = 'all'){
+        if (value.category == 'all'){
             getGroups = await tgGroupModel.find({
                 status: 1
             }).select('_id url name image category views').sort({ createdAt: -1 });
