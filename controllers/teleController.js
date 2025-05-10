@@ -4,7 +4,7 @@ const cheerio = require('cheerio');
 const tgGroupModel = require("../models/tgGroups");
 
 
-async function fetchTgGroupByUrl(url){
+async function fetchTgGroupByUrl(url) {
     try {
         const response = await axios.get(url, {
             headers: {
@@ -25,40 +25,40 @@ async function fetchTgGroupByUrl(url){
         if (groupName.includes('Telegram: Contact')) return false;
         return { status: true, name: groupName, description: groupDescription, image: profilePic };
     } catch (error) {
-        return {status:false}
+        return { status: false }
     }
 }
 
-const fetchUrl = async(req, res) => {
+const fetchUrl = async (req, res) => {
     try {
         const bodyValidation = teleJoiValidation.submitUrl.validate(req.query);
-       if(bodyValidation.error) throw new Error('Invalid Group URL !');
+        if (bodyValidation.error) throw new Error('Invalid Group URL !');
 
-  
-        req.query.url=  `https://telegram.me/${req.query.url.split('t.me/')[1]}`
+
+        req.query.url = `https://telegram.me/${req.query.url.split('t.me/')[1]}`
         console.log(req.query.url);
         const getData = await fetchTgGroupByUrl(req.query.url);
-        if(!getData.status) throw new Error('No Group Exist!');
+        if (!getData.status) throw new Error('No Group Exist!');
         delete getData.status;
-       return res.status(200).send({
-        status:200,
-        message:"success",
-           data: getData
-       })
+        return res.status(200).send({
+            status: 200,
+            message: "success",
+            data: getData
+        })
     } catch (error) {
         return res.send({
-            status:400,
+            status: 400,
             message: error.message
         });
     }
 }
 
-const addGorup = async(req, res) => {
+const addGorup = async (req, res) => {
     try {
         const { error, value } = teleJoiValidation.addGroup.validate(req.body);
         if (error) throw new Error('Invalid Group Data! Try Again');
-        const isGroupExist =await tgGroupModel.findOne({
-                url:value.url
+        const isGroupExist = await tgGroupModel.findOne({
+            url: value.url
         }).select('name');
 
         if (isGroupExist) throw new Error(`${isGroupExist.name} Group already Exist !`);
@@ -69,18 +69,18 @@ const addGorup = async(req, res) => {
 
         const createGroup = new tgGroupModel({
             userKey: value.userKey,
-            url:`https://telegram.me/${value.url.split('t.me/')[1]}`,
+            url: `https://telegram.me/${value.url.split('t.me/')[1]}`,
             name: value.name,
             image: value.image,
             category: value.category || 'latest',
             description: value.description
         });
 
-      const isRegister =   await createGroup.save()
+        const isRegister = await createGroup.save()
 
 
         return res.status(200).send({
-            status:200,
+            status: 200,
             message: "success",
             data: isRegister
         })
@@ -93,9 +93,9 @@ const addGorup = async(req, res) => {
     }
 }
 
-const myGroups = async(req,res)=>{
+const myGroups = async (req, res) => {
     try {
-        const {error,value} = teleJoiValidation.myGroups.validate(req.query);
+        const { error, value } = teleJoiValidation.myGroups.validate(req.query);
         if (error) throw new Error('Invalid user Key !');
 
         const myGroups = await tgGroupModel.find({
@@ -108,7 +108,7 @@ const myGroups = async(req,res)=>{
             data: myGroups
         })
     } catch (error) {
-       console.log(error); 
+        console.log(error);
         return res.send({
             status: 400,
             message: error.message
@@ -121,52 +121,78 @@ const getGroups = async (req, res) => {
         const { error, value } = teleJoiValidation.getGroups.validate(req.query);
         if (error) throw new Error('Invalid user Key !');
 
+        const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
+        const limit = parseInt(req.query.limit) || 10; // Default to 10 items per page if not provided
+        const skip = (page - 1) * limit; // Calculate how many items to skip
+
         let getGroups;
-        if (value.category == 'all'){
+        if (value.category == 'all') {
             getGroups = await tgGroupModel.find({
                 status: 1
-            }).select('_id url name image category views').sort({ createdAt: -1 });
-        }else{
-             getGroups = await tgGroupModel.find({
+            })
+                .select('_id url name image category views')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit);
+        } else {
+            getGroups = await tgGroupModel.find({
                 category: value.category,
-                status:1
-             }).select('_id url name image category views').sort({ createdAt: -1 });
+                status: 1
+            })
+                .select('_id url name image category views')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit);
         }
+
+        // Get the total count for pagination metadata
+        const totalGroups = await tgGroupModel.countDocuments({
+            status: 1,
+            ...(value.category !== 'all' && { category: value.category })
+        });
+
+        const totalPages = Math.ceil(totalGroups / limit); // Calculate the total number of pages
+
         return res.status(200).send({
             status: 200,
             message: "success",
-            data: getGroups
-        })
+            data: getGroups,
+            pagination: {
+                totalItems: totalGroups,
+                totalPages: totalPages
+            },
+        });
     } catch (error) {
         console.log(error);
         return res.send({
             status: 400,
-            message: error.message
+            message: error.message,
         });
     }
-}
+};
+
 
 const increaseViews = async (req, res) => {
-  try {
-    const { groupId } = req.body;
+    try {
+        const { groupId } = req.body;
 
-    await tgGroupModel.findByIdAndUpdate(
-      groupId,
-      { $inc: { views: 1 } }
-    );
+        await tgGroupModel.findByIdAndUpdate(
+            groupId,
+            { $inc: { views: 1 } }
+        );
 
-    return res.status(200).send({
-      status: 200,
-      message: 'View count increased successfully',
-    });
-    
-  } catch (error) {
-    console.log('Error in increaseViews:', error);
-    return res.status(500).send({
-      status: 500,
-      message: 'Something went wrong',
-    });
-  }
+        return res.status(200).send({
+            status: 200,
+            message: 'View count increased successfully',
+        });
+
+    } catch (error) {
+        console.log('Error in increaseViews:', error);
+        return res.status(500).send({
+            status: 500,
+            message: 'Something went wrong',
+        });
+    }
 };
 
 const getGroupsForAdmin = async (req, res) => {
@@ -191,12 +217,12 @@ const getGroupsForAdmin = async (req, res) => {
     }
 }
 
-const approveGroup = async (req,res) =>{
+const approveGroup = async (req, res) => {
     try {
         const { error, value } = teleJoiValidation.approveGroup.validate(req.body);
         if (error) throw new Error('Invalid requested Group id  !');
 
-        const isStatusChanged = await tgGroupModel.findByIdAndUpdate(value.id,{
+        const isStatusChanged = await tgGroupModel.findByIdAndUpdate(value.id, {
             status: 1
         });
 
