@@ -223,7 +223,7 @@ const approveGroup = async (req, res) => {
         if (error) throw new Error('Invalid requested Group id  !');
 
         const isStatusChanged = await tgGroupModel.findByIdAndUpdate(value.id, {
-            status: 1
+            status: req.body.status
         });
 
         if (!isStatusChanged) throw new Error('While Approving Group! something went Wrong.');

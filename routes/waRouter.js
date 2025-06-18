@@ -13,6 +13,6 @@ router.post('/increaseViews', increaseViews);
 
 
 router.get('/admin/getGroups', getGroupsForAdmin);
-router.get('/admin/approveGroup', approveGroup);
+router.post('/admin/approveGroup', approveGroup);
 
 module.exports = router;

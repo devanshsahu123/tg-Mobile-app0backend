@@ -1,10 +1,10 @@
-const teleJoiValidation = require("../utils/teleJoiValidation");
+const waJoinValidation = require("../utils/waJoinValidation");
 const axios = require("axios");
 const cheerio = require('cheerio');
 const waGroupModel = require("../models/waGroups");
 
 
-async function fetchTgGroupByUrl(url) {
+async function fetchWaGroupByUrl(url) {
     try {
         const response = await axios.get(url, {
             headers: {
@@ -31,13 +31,11 @@ async function fetchTgGroupByUrl(url) {
 
 const fetchUrl = async (req, res) => {
     try {
-        const bodyValidation = teleJoiValidation.submitUrl.validate(req.query);
+        const bodyValidation = waJoinValidation.submitUrl.validate(req.query);
         if (bodyValidation.error) throw new Error('Invalid Group URL !');
-
-
-        req.query.url = `https://telegram.me/${req.query.url.split('t.me/')[1]}`
         console.log(req.query.url);
-        const getData = await fetchTgGroupByUrl(req.query.url);
+        
+        const getData = await fetchWaGroupByUrl(req.query.url);
         if (!getData.status) throw new Error('No Group Exist!');
         delete getData.status;
         return res.status(200).send({
@@ -55,47 +53,46 @@ const fetchUrl = async (req, res) => {
 
 const addGorup = async (req, res) => {
     try {
-        const { error, value } = teleJoiValidation.addGroup.validate(req.body);
+        const { error, value } = waJoinValidation.addGroup.validate(req.body);
         if (error) throw new Error('Invalid Group Data! Try Again');
-        const isGroupExist = await waGroupModel.findOne({
-            url: value.url
-        }).select('name');
 
-        if (isGroupExist) throw new Error(`${isGroupExist.name} Group already Exist !`);
-        // const getData = await fetchTgGroupByUrl(value.url);
-        // console.log(getData);
-        // if (!getData.status) throw new Error('something want wrong !');
+        const isGroupExist = await waGroupModel.findOne({ url: value.url }).select('name');
+        if (isGroupExist) throw new Error(`${isGroupExist.name} group already exists!`);
+
+        // Optional: fetch from WhatsApp group page
+        // const getData = await fetchWaGroupByUrl(value.url);
+        // if (!getData || !getData.status) throw new Error('Failed to fetch group details from WhatsApp');
         // delete getData.status;
 
         const createGroup = new waGroupModel({
             userKey: value.userKey,
-            url: `https://telegram.me/${value.url.split('t.me/')[1]}`,
-            name: value.name,
-            image: value.image,
+            url: value.url, // no conversion needed
+            name: value.name, // or getData.name if fetched dynamically
+            image: value.image, // or getData.image
             category: value.category || 'latest',
-            description: value.description
+            description: value.description // or getData.description
         });
 
-        const isRegister = await createGroup.save()
-
+        const isRegistered = await createGroup.save();
 
         return res.status(200).send({
             status: 200,
-            message: "success",
-            data: isRegister
-        })
+            message: "Success",
+            data: isRegistered
+        });
     } catch (error) {
         console.log(error);
-        return res.send({
+        return res.status(400).send({
             status: 400,
             message: error.message
         });
     }
-}
+};
+
 
 const myGroups = async (req, res) => {
     try {
-        const { error, value } = teleJoiValidation.myGroups.validate(req.query);
+        const { error, value } = waJoinValidation.myGroups.validate(req.query);
         if (error) throw new Error('Invalid user Key !');
 
         const myGroups = await waGroupModel.find({
@@ -118,7 +115,7 @@ const myGroups = async (req, res) => {
 
 const getGroups = async (req, res) => {
     try {
-        const { error, value } = teleJoiValidation.getGroups.validate(req.query);
+        const { error, value } = waJoinValidation.getGroups.validate(req.query);
         if (error) throw new Error('Invalid user Key !');
 
         const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
@@ -197,8 +194,9 @@ const increaseViews = async (req, res) => {
 
 const getGroupsForAdmin = async (req, res) => {
     try {
-        const { error, value } = teleJoiValidation.myGroups.validate(req.query);
-        if (error) throw new Error('Invalid request status  !');
+        const { error, value } = waJoinValidation.getGroupsForAdmin.validate(req.query);
+        console.log(value);
+        if (error) throw new Error( error);
 
         const userGroups = await waGroupModel.find({
             status: value.status
@@ -219,12 +217,12 @@ const getGroupsForAdmin = async (req, res) => {
 
 const approveGroup = async (req, res) => {
     try {
-        const { error, value } = teleJoiValidation.approveGroup.validate(req.body);
+        const { error, value } = waJoinValidation.approveGroup.validate(req.body);
         if (error) throw new Error('Invalid requested Group id  !');
 
         const isStatusChanged = await waGroupModel.findByIdAndUpdate(value.id, {
-            status: 1
-        });
+            status: req.body.status
+        })
 
         if (!isStatusChanged) throw new Error('While Approving Group! something went Wrong.');
 
