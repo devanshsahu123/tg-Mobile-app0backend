@@ -1,4 +1,4 @@
-const { addGorup, fetchUrl, myGroups, getGroups, approveGroup, getGroupsForAdmin, increaseViews } = require('../controllers/waController');
+const { addGorup, fetchUrl, myGroups, getGroups, approveGroup, getGroupsForAdmin, increaseViews, approveGroupStatus, renderAdminPage } = require('../controllers/waController');
 const router = require('express').Router()
 
 router.get('/fetchUrl', fetchUrl);
@@ -11,8 +11,9 @@ router.get('/getGroups', getGroups);
 
 router.post('/increaseViews', increaseViews);
 
-
+//admin Routes
 router.get('/admin/getGroups', getGroupsForAdmin);
-router.post('/admin/approveGroup', approveGroup);
+router.post('/admin/updateStatus', approveGroupStatus);
+router.get('/admin/page', renderAdminPage)
 
 module.exports = router;

@@ -28,7 +28,8 @@ const TgGroupSchema = new mongoose.Schema({
     },
     status: {
         type: Number,
-        default: 0
+        default: 0,
+        enum: [0, 1, 2] // 0: pending, 1: approved, 2: rejected
     },
     views: {
         type: Number,

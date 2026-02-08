@@ -26,8 +26,8 @@ class waJoinValidation {
         status:Joi.number().allow(0,1,3)
     });
 
-    static approveGroup = Joi.object({
-        id:Joi.string().required(),
+    static approveGroupStatus = Joi.object({
+        groupId: Joi.string().required(),
         status: Joi.number().valid(0, 1, 2).default(1).label('Status')
     })
 }

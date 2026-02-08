@@ -2,6 +2,7 @@ const waJoinValidation = require("../utils/waJoinValidation");
 const axios = require("axios");
 const cheerio = require('cheerio');
 const waGroupModel = require("../models/waGroups");
+const path = require('path');
 
 
 async function fetchWaGroupByUrl(url) {
@@ -33,8 +34,6 @@ const fetchUrl = async (req, res) => {
     try {
         const bodyValidation = waJoinValidation.submitUrl.validate(req.query);
         if (bodyValidation.error) throw new Error('Invalid Group URL !');
-        console.log(req.query.url);
-        
         const getData = await fetchWaGroupByUrl(req.query.url);
         if (!getData.status) throw new Error('No Group Exist!');
         delete getData.status;
@@ -215,13 +214,13 @@ const getGroupsForAdmin = async (req, res) => {
     }
 }
 
-const approveGroup = async (req, res) => {
+const approveGroupStatus = async (req, res) => {
     try {
-        const { error, value } = waJoinValidation.approveGroup.validate(req.body);
+        const { error, value } = waJoinValidation.approveGroupStatus.validate(req.body);
         if (error) throw new Error('Invalid requested Group id  !');
 
-        const isStatusChanged = await waGroupModel.findByIdAndUpdate(value.id, {
-            status: req.body.status
+        const isStatusChanged = await waGroupModel.findByIdAndUpdate(value.groupId, {
+            status: value.status
         })
 
         if (!isStatusChanged) throw new Error('While Approving Group! something went Wrong.');
@@ -239,7 +238,11 @@ const approveGroup = async (req, res) => {
     }
 }
 
+const renderAdminPage = (req, res) => {
+    return res.render(path.join(__dirname, "../pages/wa-admin.ejs"));
+}
+
 
 module.exports = {
-    fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin, approveGroup
+    fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin, approveGroupStatus, renderAdminPage
 }

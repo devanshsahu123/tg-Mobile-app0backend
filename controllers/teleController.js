@@ -2,7 +2,7 @@ const teleJoiValidation = require("../utils/teleJoiValidation");
 const axios = require("axios");
 const cheerio = require('cheerio');
 const tgGroupModel = require("../models/tgGroups");
-
+const path = require('path');
 
 async function fetchTgGroupByUrl(url) {
     try {
@@ -36,7 +36,6 @@ const fetchUrl = async (req, res) => {
 
 
         req.query.url = `https://telegram.me/${req.query.url.split('t.me/')[1]}`
-        console.log(req.query.url);
         const getData = await fetchTgGroupByUrl(req.query.url);
         if (!getData.status) throw new Error('No Group Exist!');
         delete getData.status;
@@ -62,10 +61,7 @@ const addGorup = async (req, res) => {
         }).select('name');
 
         if (isGroupExist) throw new Error(`${isGroupExist.name} Group already Exist !`);
-        // const getData = await fetchTgGroupByUrl(value.url);
-        // console.log(getData);
-        // if (!getData.status) throw new Error('something want wrong !');
-        // delete getData.status;
+
 
         const createGroup = new tgGroupModel({
             userKey: value.userKey,
@@ -197,12 +193,12 @@ const increaseViews = async (req, res) => {
 
 const getGroupsForAdmin = async (req, res) => {
     try {
-        const { error, value } = teleJoiValidation.myGroups.validate(req.query);
-        if (error) throw new Error('Invalid request status  !');
-
+        const { error, value } = teleJoiValidation.getGroupsForAdmin.validate(req.query);
+        if (error) throw new Error(error);
         const userGroups = await tgGroupModel.find({
-            status: value.status
+          status: value.status,
         });
+        
         return res.status(200).send({
             status: 200,
             message: "success",
@@ -217,13 +213,13 @@ const getGroupsForAdmin = async (req, res) => {
     }
 }
 
-const approveGroup = async (req, res) => {
+const approveGroupStatus = async (req, res) => {
     try {
-        const { error, value } = teleJoiValidation.approveGroup.validate(req.body);
+        const { error, value } = teleJoiValidation.approveGroupStatus.validate(req.body);
         if (error) throw new Error('Invalid requested Group id  !');
 
-        const isStatusChanged = await tgGroupModel.findByIdAndUpdate(value.id, {
-            status: req.body.status
+        const isStatusChanged = await tgGroupModel.findByIdAndUpdate(value.groupId, {
+            status:value.status
         });
 
         if (!isStatusChanged) throw new Error('While Approving Group! something went Wrong.');
@@ -241,7 +237,19 @@ const approveGroup = async (req, res) => {
     }
 }
 
+const renderAdminPage = async (req, res) => {
+    try {
+        res.render(path.join(__dirname, "../pages/tg-admin.ejs"));
+    } catch (error) {
+        console.log(error);
+        return res.send({
+            status: 400,
+            message: error.message
+        });
+    }
+}
+
 
 module.exports = {
-    fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin, approveGroup
+    fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin, approveGroupStatus,renderAdminPage
 }

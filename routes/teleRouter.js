@@ -1,4 +1,4 @@
-const { addGorup, fetchUrl, myGroups, getGroups, approveGroup, getGroupsForAdmin, increaseViews } = require('../controllers/teleController');
+const { addGorup, fetchUrl, myGroups, getGroups, approveGroupStatus, getGroupsForAdmin, increaseViews, renderAdminPage } = require('../controllers/teleController');
 const router = require('express').Router()
 
 router.get('/fetchUrl', fetchUrl);
@@ -11,10 +11,10 @@ router.get('/getGroups', getGroups);
 
 router.post('/increaseViews', increaseViews);
 
-
+//admin Routes
 router.get('/admin/getGroups', getGroupsForAdmin);
-router.get('/admin/approveGroup', approveGroup);
-
+router.post('/admin/updateStatus', approveGroupStatus);
+router.get('/admin/page',renderAdminPage)
 
 
 
