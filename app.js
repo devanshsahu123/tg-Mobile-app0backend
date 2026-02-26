@@ -22,6 +22,12 @@ app.get("/", (req, res) => {
   res.render("Right-Review");
 });
 
+
+app.get("/app-ads.txt", (req, res) => {
+  res.setHeader("Content-Type", "text/plain");
+  res.sendFile(path.join(__dirname, "app-ads.txt"));
+});
+
 app.use("/tg", teleRouter);
 app.use("/wa", waRouter);
 
