@@ -1,6 +1,7 @@
 const express = require("express");
 const teleRouter = require("./routes/teleRouter.js");
 const waRouter = require("./routes/waRouter.js");
+const coldEmailRouter = require("./routes/coldEmailRouter.js");
 const path = require("path");
 const connectDB = require("./db/db.js");
 const cors = require("cors");
@@ -30,5 +31,6 @@ app.get("/app-ads.txt", (req, res) => {
 
 app.use("/tg", teleRouter);
 app.use("/wa", waRouter);
+app.use("/cold-email", coldEmailRouter);
 
 app.listen(port, () => console.log(`http://localhost:${port}`));

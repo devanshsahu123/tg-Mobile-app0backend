@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cold Email Flow | Lead Manager</title>
+    
+    <!-- Google Fonts & Font Awesome Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- PapaParse for Client-Side CSV Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- SheetJS for Client-Side Excel XLSX Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --bg-card: rgba(22, 28, 45, 0.7);
+            --bg-card-hover: rgba(26, 35, 58, 0.85);
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --accent: #d946ef;
+            --success: #10b981;
+            --danger: #f43f5e;
+            --warning: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.15);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+            --glow-primary: rgba(99, 102, 241, 0.15);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+            --radius-xl: 1.25rem;
+            --radius-lg: 0.875rem;
+            --radius-md: 0.5rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(217, 70, 239, 0.05) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem;
+        }
+
+        /* Header Style */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-title-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-icon {
+            font-size: 2.25rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .header-title h1 {
+            font-family: var(--font-display);
+            font-size: 1.875rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #ffffff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.03em;
+        }
+
+        .header-title p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            font-weight: 400;
+        }
+
+        /* Navigation Tabs */
+        .tabs-nav {
+            display: flex;
+            gap: 0.75rem;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 0.375rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            margin-bottom: 2rem;
+            width: fit-content;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.625rem 1.5rem;
+            font-family: var(--font-display);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: var(--radius-md);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .tab-btn.active {
+            color: white;
+            background: var(--primary);
+            box-shadow: 0 4px 12px var(--glow-primary);
+        }
+
+        /* Panels */
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Glass Cards */
+        .glass-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border);
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(16px);
+            transition: border-color 0.3s;
+        }
+
+        .glass-card:hover {
+            border-color: var(--border-hover);
+        }
+
+        /* Step Card */
+        .section-header {
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-title i {
+            color: var(--primary);
+        }
+
+        /* Drag & Drop File Zone */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-lg);
+            padding: 3rem 2rem;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.01);
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .upload-zone:hover, .upload-zone.drag-active {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.03);
+        }
+
+        .upload-zone-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            opacity: 0.8;
+            transition: transform 0.3s;
+        }
+
+        .upload-zone:hover .upload-icon {
+            transform: translateY(-4px);
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Mapping Section */
+        .mapping-wrapper {
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .mapping-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+            background: rgba(255, 255, 255, 0.015);
+            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+        }
+
+        .mapping-grid-title {
+            grid-column: 1 / -1;
+            font-family: var(--font-display);
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .mapping-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .field-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .field-label .required {
+            color: var(--danger);
+        }
+
+        .select-wrapper {
+            position: relative;
+            min-width: 0;
+            width: 100%;
+        }
+
+        .form-select {
+            width: 100%;
+            max-width: 100%;
+            padding: 0.75rem 2.5rem 0.75rem 1rem;
+            background-color: #121927;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1.25rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .form-select:hover {
+            border-color: var(--border-hover);
+        }
+
+        .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+        }
+
+        .form-select option {
+            background-color: #0b0f19;
+            color: var(--text-main);
+        }
+
+        /* Preview Card */
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.015);
+            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            max-height: 400px;
+        }
+
+        .preview-table-wrapper {
+            overflow-x: auto;
+            flex-grow: 1;
+            margin-top: 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        .table th {
+            background: #121927;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 0.75rem 1rem;
+            font-family: var(--font-display);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+            white-space: nowrap;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table tbody tr:hover {
+            background: rgba(255,255,255,0.01);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-family: var(--font-display);
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e11d48;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255,255,255,0.03);
+            border-color: var(--text-muted);
+        }
+
+        .actions-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Database View Filters */
+        .db-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-box-wrapper {
+            position: relative;
+            flex-grow: 1;
+            max-width: 400px;
+        }
+
+        .search-box-wrapper i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            background: rgba(255,255,255,0.04);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .db-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        /* Pagination & Stats */
+        .db-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .stats-text {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .pagination-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .page-num {
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.25rem 0.75rem;
+        }
+
+        /* Statuses & Modals */
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid transparent;
+        }
+
+        .alert-info {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.2);
+            color: #a5b4fc;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+        }
+
+        .alert-danger {
+            background: rgba(244, 63, 94, 0.1);
+            border-color: rgba(244, 63, 94, 0.2);
+            color: #fda4af;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .progress-bar-wrapper {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            border-radius: 999px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.375rem;
+        }
+
+        /* Empty state */
+        .empty-state {
+            padding: 4rem 2rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 3.5rem;
+            color: rgba(255,255,255,0.1);
+        }
+
+        .empty-state h3 {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-width: 400px;
+        }
+
+        .toast {
+            background: #1e293b;
+            color: white;
+            border-left: 4px solid var(--primary);
+            padding: 1rem 1.25rem;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .toast.success {
+            border-left-color: var(--success);
+        }
+
+        .toast.danger {
+            border-left-color: var(--danger);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- App Header -->
+        <header class="app-header">
+            <div class="header-title-wrapper">
+                <i class="fa-solid fa-paper-plane header-icon"></i>
+                <div class="header-title">
+                    <h1>Cold Email Flow</h1>
+                    <p>Import CSV data, map columns, and feed your lead collection</p>
+                </div>
+            </div>
+            
+            <a href="/" class="btn btn-outline">
+                <i class="fa-solid fa-house"></i> Home
+            </a>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab('import')">
+                <i class="fa-solid fa-file-import"></i> CSV Import Wizard
+            </button>
+            <button class="tab-btn" onclick="switchTab('database')">
+                <i class="fa-solid fa-database"></i> Leads Database
+            </button>
+        </nav>
+
+        <!-- Tab Panel: Import Wizard -->
+        <div id="panel-import" class="tab-panel active">
+            <div class="glass-card">
+                <div class="section-header">
+                    <div class="section-title">
+                        <i class="fa-solid fa-upload"></i>
+                        <span>Step 1: Upload CSV or Excel Document</span>
+                    </div>
+                </div>
+
+                <!-- Drag & Drop Zone -->
+                <div class="upload-zone" id="drop-zone">
+                    <div class="upload-zone-content">
+                        <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                        <div>
+                            <p style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.25rem;">
+                                Drag and drop your CSV or Excel file here
+                            </p>
+                            <p style="color: var(--text-muted); font-size: 0.875rem;">
+                                or click to browse files from your computer (.csv, .xlsx, .xls)
+                            </p>
+                        </div>
+                    </div>
+                    <input type="file" id="file-input" accept=".csv, .xlsx, .xls">
+                </div>
+
+                <!-- Info message when no file loaded -->
+                <div id="no-file-alert" class="alert alert-info">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>Please upload a CSV or Excel file to map headers to database keys.</span>
+                </div>
+
+                <!-- File Info Card -->
+                <div id="file-info-container" style="display: none; margin-bottom: 2rem;">
+                    <div style="background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <i class="fa-regular fa-file-excel" style="font-size: 2rem; color: var(--success);"></i>
+                            <div>
+                                <h4 id="file-name-label" style="font-family: var(--font-display); font-weight: 600;">leads_data.csv</h4>
+                                <p id="file-details-label" style="font-size: 0.8rem; color: var(--text-muted);">150 rows found • 12 KB</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="resetImportWizard()">
+                            <i class="fa-solid fa-xmark"></i> Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mapping & Preview Wrapper -->
+                <div id="mapping-section" style="display: none;">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fa-solid fa-gears"></i>
+                            <span>Step 2: Map Columns & Verify Data</span>
+                        </div>
+                    </div>
+
+                    <div class="mapping-wrapper">
+                        <!-- Column Selectors -->
+                        <div class="mapping-grid">
+                            <h3 class="mapping-grid-title">
+                                Map Fields
+                            </h3>
+                            
+                            <div class="mapping-item">
+                                <div class="field-label">
+                                    <span>Business Name</span>
+                                    <span class="required">*</span>
+                                </div>
+                                <div class="select-wrapper">
+                                    <select id="map-business" class="form-select" onchange="updateMappingPreview()">
+                                        <option value="">-- Ignore --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mapping-item">
+                                <div class="field-label">
+                                    <span>Client Name</span>
+                                </div>
+                                <div class="select-wrapper">
+                                    <select id="map-client" class="form-select" onchange="updateMappingPreview()">
+                                        <option value="">-- Ignore --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mapping-item">
+                                <div class="field-label">
+                                    <span>Mobile Number</span>
+                                </div>
+                                <div class="select-wrapper">
+                                    <select id="map-mobile" class="form-select" onchange="updateMappingPreview()">
+                                        <option value="">-- Ignore --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mapping-item">
+                                <div class="field-label">
+                                    <span>Email Address</span>
+                                </div>
+                                <div class="select-wrapper">
+                                    <select id="map-email" class="form-select" onchange="updateMappingPreview()">
+                                        <option value="">-- Ignore --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mapping-item">
+                                <div class="field-label">
+                                    <span>City</span>
+                                </div>
+                                <div class="select-wrapper">
+                                    <select id="map-city" class="form-select" onchange="updateMappingPreview()">
+                                        <option value="">-- Ignore --</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Data Preview -->
+                        <div class="preview-container">
+                            <h3 style="font-family: var(--font-display); font-size: 1rem; font-weight: 700; display: flex; align-items: center; justify-content: space-between;">
+                                <span>Preview Mapping (First 5 Rows)</span>
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;" id="preview-total-rows">0 records total</span>
+                            </h3>
+                            <div class="preview-table-wrapper">
+                                <table class="table" id="preview-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Business Name</th>
+                                            <th>Client Name</th>
+                                            <th>Mobile</th>
+                                            <th>Email</th>
+                                            <th>City</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="preview-tbody">
+                                        <!-- Will be populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Import Progress Bar -->
+                    <div class="progress-container" id="import-progress">
+                        <div class="progress-bar-wrapper">
+                            <div class="progress-bar-fill" id="progress-fill"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span id="progress-status-msg">Importing records...</span>
+                            <span id="progress-percent">0%</span>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="actions-row">
+                        <button class="btn btn-outline" onclick="resetImportWizard()">Cancel</button>
+                        <button class="btn btn-primary" id="btn-import-submit" onclick="submitImport()">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Import to Database
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Panel: Leads Database -->
+        <div id="panel-database" class="tab-panel">
+            <div class="glass-card">
+                <div class="db-header">
+                    <div class="search-box-wrapper">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="db-search" class="search-input" placeholder="Search leads by name, email, city..." oninput="handleSearchInput(event)">
+                    </div>
+                    <div class="db-actions">
+                        <button class="btn btn-outline" onclick="loadLeads()">
+                            <i class="fa-solid fa-rotate"></i> Refresh
+                        </button>
+                        <button class="btn btn-danger" onclick="confirmClearDatabase()">
+                            <i class="fa-solid fa-trash-can"></i> Clear Database
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Database Table Wrapper -->
+                <div class="preview-table-wrapper" style="max-height: none; min-height: 200px; margin-top: 0;">
+                    <table class="table" id="db-leads-table">
+                        <thead>
+                            <tr>
+                                <th>Business Name</th>
+                                <th>Client Name</th>
+                                <th>Mobile Number</th>
+                                <th>Email</th>
+                                <th>City</th>
+                                <th>Import Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="db-leads-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Table Footer (Pagination) -->
+                <div class="db-footer">
+                    <div class="stats-text" id="db-stats-text">
+                        Showing 0 to 0 of 0 leads
+                    </div>
+                    <div class="pagination-wrapper">
+                        <button class="btn btn-outline" style="padding: 0.5rem 0.75rem;" id="btn-page-prev" onclick="changePage(-1)">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <span class="page-num" id="page-num-display">1 / 1</span>
+                        <button class="btn btn-outline" style="padding: 0.5rem 0.75rem;" id="btn-page-next" onclick="changePage(1)">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Page Scripts -->
+    <script>
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+
+            const activeBtn = document.querySelector(`.tab-btn[onclick="switchTab('${tabName}')"]`);
+            const activePanel = document.getElementById(`panel-${tabName}`);
+
+            if (activeBtn) activeBtn.classList.add('active');
+            if (activePanel) activePanel.classList.add('active');
+
+            if (tabName === 'database') {
+                loadLeads();
+            }
+        }
+
+        // Global states for importing
+        let parsedHeaders = [];
+        let parsedData = [];
+        let fileLoaded = false;
+
+        // Setup drop-zone events
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-active');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-active');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-active');
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // Router for file parsing based on extension
+        function handleFile(file) {
+            const name = file.name.toLowerCase();
+            if (name.endsWith('.csv')) {
+                handleCSVFile(file);
+            } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+                handleExcelFile(file);
+            } else {
+                showToast('Please select a valid CSV or Excel file.', 'danger');
+            }
+        }
+
+        // Parse local Excel file
+        function handleExcelFile(file) {
+            if (typeof XLSX === 'undefined') {
+                showToast('Excel parser library (SheetJS) is not loaded. Please verify your internet connection.', 'danger');
+                return;
+            }
+
+            // Show loading animation on upload icon
+            const uploadIcon = document.querySelector('.upload-icon');
+            uploadIcon.className = 'fa-solid fa-spinner fa-spin upload-icon';
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    if (workbook.SheetNames.length === 0) {
+                        throw new Error("Excel file contains no sheets.");
+                    }
+                    
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Parse sheet to array of arrays to get clean headers and rows
+                    const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+                    
+                    if (rawRows.length === 0) {
+                        throw new Error("The Excel sheet is empty.");
+                    }
+
+                    // Extract headers from first row
+                    const headers = rawRows[0].map((h, i) => String(h || "").trim() || `Column ${i + 1}`);
+                    
+                    // Map subsequent rows to objects keyed by headers
+                    const rows = rawRows.slice(1).map(row => {
+                        const obj = {};
+                        headers.forEach((header, i) => {
+                            obj[header] = row[i] !== undefined ? String(row[i]).trim() : "";
+                        });
+                        return obj;
+                    });
+
+                    uploadIcon.className = 'fa-solid fa-cloud-arrow-up upload-icon';
+
+                    parsedData = rows;
+                    parsedHeaders = headers;
+                    fileLoaded = true;
+
+                    // Update Labels
+                    document.getElementById('file-name-label').textContent = file.name;
+                    document.getElementById('file-details-label').textContent = 
+                        `${rows.length} rows found • ${Math.round(file.size / 1024)} KB`;
+
+                    // Hide drag zone, show mapping
+                    dropZone.style.display = 'none';
+                    document.getElementById('no-file-alert').style.display = 'none';
+                    document.getElementById('file-info-container').style.display = 'block';
+                    document.getElementById('mapping-section').style.display = 'block';
+
+                    populateMappingDropdowns();
+                    autoMapColumns();
+                    updateMappingPreview();
+                    showToast('Excel parsed successfully. Ready for mapping.', 'success');
+                } catch (err) {
+                    uploadIcon.className = 'fa-solid fa-cloud-arrow-up upload-icon';
+                    showToast('Excel Parsing Failed: ' + err.message, 'danger');
+                }
+            };
+            reader.onerror = function () {
+                uploadIcon.className = 'fa-solid fa-cloud-arrow-up upload-icon';
+                showToast('Error reading Excel file.', 'danger');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Parse local CSV file
+        function handleCSVFile(file) {
+            // Show loading animation on upload icon
+            const uploadIcon = document.querySelector('.upload-icon');
+            uploadIcon.className = 'fa-solid fa-spinner fa-spin upload-icon';
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: 'greedy',
+                complete: function (results) {
+                    uploadIcon.className = 'fa-solid fa-cloud-arrow-up upload-icon';
+                    
+                    if (results.errors.length > 0 && results.data.length === 0) {
+                        showToast('Error reading CSV file.', 'danger');
+                        return;
+                    }
+
+                    parsedData = results.data;
+                    parsedHeaders = results.meta.fields || [];
+                    fileLoaded = true;
+
+                    // Update Labels
+                    document.getElementById('file-name-label').textContent = file.name;
+                    document.getElementById('file-details-label').textContent = 
+                        `${results.data.length} rows found • ${Math.round(file.size / 1024)} KB`;
+
+                    // Hide drag zone, show mapping
+                    dropZone.style.display = 'none';
+                    document.getElementById('no-file-alert').style.display = 'none';
+                    document.getElementById('file-info-container').style.display = 'block';
+                    document.getElementById('mapping-section').style.display = 'block';
+
+                    populateMappingDropdowns();
+                    autoMapColumns();
+                    updateMappingPreview();
+                    showToast('CSV parsed successfully. Ready for mapping.', 'success');
+                },
+                error: function (err) {
+                    uploadIcon.className = 'fa-solid fa-cloud-arrow-up upload-icon';
+                    showToast('CSV Parsing Failed: ' + err.message, 'danger');
+                }
+            });
+        }
+
+        // Populate column headers into dropdowns
+        function populateMappingDropdowns() {
+            const dropdowns = ['map-business', 'map-client', 'map-mobile', 'map-email', 'map-city'];
+            dropdowns.forEach(id => {
+                const select = document.getElementById(id);
+                // Keep the "Ignore" option
+                select.innerHTML = '<option value="">-- Ignore --</option>';
+                
+                parsedHeaders.forEach(header => {
+                    const opt = document.createElement('option');
+                    opt.value = header;
+                    opt.textContent = header;
+                    select.appendChild(opt);
+                });
+            });
+        }
+
+        // Intelligently auto-map column headers
+        function autoMapColumns() {
+            const mappings = {
+                'map-business': [/business/i, /company/i, /firm/i, /organization/i, /org/i, /vendor/i],
+                'map-client': [/client/i, /customer/i, /name/i, /contact/i, /person/i, /owner/i],
+                'map-mobile': [/phone/i, /mobile/i, /number/i, /tel/i, /cell/i, /contact/i],
+                'map-email': [/email/i, /mail/i, /e-mail/i],
+                'map-city': [/city/i, /town/i, /location/i, /place/i, /address/i]
+            };
+
+            for (const [selectId, patterns] of Object.entries(mappings)) {
+                const select = document.getElementById(selectId);
+                
+                // Find matching header
+                const match = parsedHeaders.find(header => {
+                    return patterns.some(pattern => pattern.test(header));
+                });
+
+                if (match) {
+                    select.value = match;
+                }
+            }
+        }
+
+        // Get currently selected mapping values
+        function getCurrentMapping() {
+            return {
+                businessName: document.getElementById('map-business').value,
+                clientName: document.getElementById('map-client').value,
+                mobileNumber: document.getElementById('map-mobile').value,
+                email: document.getElementById('map-email').value,
+                City: document.getElementById('map-city').value
+            };
+        }
+
+        // Apply mapping and update live table preview
+        function updateMappingPreview() {
+            const mapping = getCurrentMapping();
+            const previewTbody = document.getElementById('preview-tbody');
+            previewTbody.innerHTML = '';
+
+            document.getElementById('preview-total-rows').textContent = `${parsedData.length} records total`;
+
+            // Enable/disable import button based on required Business Name
+            const btnSubmit = document.getElementById('btn-import-submit');
+            if (mapping.businessName) {
+                btnSubmit.disabled = false;
+                btnSubmit.style.opacity = '1';
+                btnSubmit.style.cursor = 'pointer';
+            } else {
+                btnSubmit.disabled = true;
+                btnSubmit.style.opacity = '0.5';
+                btnSubmit.style.cursor = 'not-allowed';
+            }
+
+            // Preview first 5 rows
+            const sampleRows = parsedData.slice(0, 5);
+
+            sampleRows.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                const fields = ['businessName', 'clientName', 'mobileNumber', 'email', 'City'];
+                fields.forEach(field => {
+                    const mappedCol = mapping[field];
+                    const td = document.createElement('td');
+                    td.textContent = mappedCol ? (row[mappedCol] || '') : '-';
+                    tr.appendChild(td);
+                });
+
+                previewTbody.appendChild(tr);
+            });
+        }
+
+        // Reset CSV Wizard back to upload state
+        function resetImportWizard() {
+            parsedHeaders = [];
+            parsedData = [];
+            fileLoaded = false;
+            fileInput.value = '';
+
+            dropZone.style.display = 'block';
+            document.getElementById('no-file-alert').style.display = 'flex';
+            document.getElementById('file-info-container').style.display = 'none';
+            document.getElementById('mapping-section').style.display = 'none';
+            document.getElementById('import-progress').style.display = 'none';
+            document.getElementById('btn-import-submit').disabled = false;
+        }
+
+        // Submit the mapped data to MongoDB
+        async function submitImport() {
+            const mapping = getCurrentMapping();
+            
+            // Check if businessName mapping is provided
+            if (!mapping.businessName) {
+                showToast('Business Name field is required to map.', 'danger');
+                return;
+            }
+
+            // Build array of mapped leads
+            const mappedLeads = parsedData.map(row => {
+                return {
+                    businessName: row[mapping.businessName] || '',
+                    clientName: mapping.clientName ? (row[mapping.clientName] || '') : '',
+                    mobileNumber: mapping.mobileNumber ? (row[mapping.mobileNumber] || '') : '',
+                    email: mapping.email ? (row[mapping.email] || '') : '',
+                    City: mapping.City ? (row[mapping.City] || '') : ''
+                };
+            }).filter(lead => lead.businessName.trim() !== ''); // Clean out rows with empty businessName
+
+            if (mappedLeads.length === 0) {
+                showToast('No valid records found to import (Business Name is empty or missing).', 'danger');
+                return;
+            }
+
+            // Show Progress Bar
+            const progressContainer = document.getElementById('import-progress');
+            const progressFill = document.getElementById('progress-fill');
+            const progressPercent = document.getElementById('progress-percent');
+            const progressStatusMsg = document.getElementById('progress-status-msg');
+            const btnSubmit = document.getElementById('btn-import-submit');
+
+            progressContainer.style.display = 'block';
+            btnSubmit.disabled = true;
+
+            progressFill.style.width = '20%';
+            progressPercent.textContent = '20%';
+            progressStatusMsg.textContent = 'Packaging database payload...';
+
+            try {
+                // Wait for animation
+                await new Promise(r => setTimeout(r, 400));
+                
+                progressFill.style.width = '50%';
+                progressPercent.textContent = '50%';
+                progressStatusMsg.textContent = 'Transmitting leads to server...';
+
+                const response = await fetch('/cold-email/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ leads: mappedLeads })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    progressFill.style.width = '100%';
+                    progressPercent.textContent = '100%';
+                    progressStatusMsg.textContent = result.message || 'Import complete.';
+
+                    if (result.duplicates && result.duplicates > 0) {
+                        showToast(result.message, 'warning');
+                    } else {
+                        showToast(result.message || `Successfully imported ${result.count} leads!`, 'success');
+                    }
+                    
+                    setTimeout(() => {
+                        resetImportWizard();
+                        switchTab('database');
+                    }, 2500);
+                } else {
+                    throw new Error(result.message || 'Import failed');
+                }
+            } catch (error) {
+                console.error('Import error:', error);
+                progressContainer.style.display = 'none';
+                btnSubmit.disabled = false;
+                showToast('Import Failed: ' + error.message, 'danger');
+            }
+        }
+
+        // Global states for Database View
+        let dbCurrentPage = 1;
+        let dbPageSize = 10;
+        let dbSearchQuery = '';
+        let dbSearchTimeout = null;
+
+        // Fetch leads from DB API
+        async function loadLeads() {
+            const tbody = document.getElementById('db-leads-tbody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 3rem;">
+                        <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem;"></i>
+                        <p style="color: var(--text-muted);">Fetching leads archive...</p>
+                    </td>
+                </tr>
+            `;
+
+            try {
+                const url = `/cold-email/leads?page=${dbCurrentPage}&limit=${dbPageSize}&search=${encodeURIComponent(dbSearchQuery)}`;
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Failed to fetch leads');
+                }
+
+                const leads = result.data || [];
+                const pagination = result.pagination || { totalItems: 0, totalPages: 1, currentPage: 1 };
+
+                // Update pagination controls
+                dbCurrentPage = pagination.currentPage;
+                document.getElementById('page-num-display').textContent = `${pagination.currentPage} / ${pagination.totalPages || 1}`;
+                
+                // Enable/disable page buttons
+                document.getElementById('btn-page-prev').disabled = dbCurrentPage <= 1;
+                document.getElementById('btn-page-next').disabled = dbCurrentPage >= pagination.totalPages;
+
+                // Update Stats Label
+                const startItem = pagination.totalItems === 0 ? 0 : (dbCurrentPage - 1) * dbPageSize + 1;
+                const endItem = Math.min(dbCurrentPage * dbPageSize, pagination.totalItems);
+                document.getElementById('db-stats-text').textContent = 
+                    `Showing ${startItem} to ${endItem} of ${pagination.totalItems} leads`;
+
+                // Render rows
+                if (leads.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <i class="fa-solid fa-folder-open"></i>
+                                    <h3>No Leads Found</h3>
+                                    <p>The leads database is currently empty. Try uploading a CSV file first.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                leads.forEach(lead => {
+                    const tr = document.createElement('tr');
+                    
+                    const cells = [
+                        lead.businessName || '-',
+                        lead.clientName || '-',
+                        lead.mobileNumber || '-',
+                        lead.email || '-',
+                        lead.City || '-'
+                    ];
+
+                    cells.forEach(val => {
+                        const td = document.createElement('td');
+                        td.textContent = val;
+                        tr.appendChild(td);
+                    });
+
+                    // Add formatted date
+                    const dateTd = document.createElement('td');
+                    dateTd.textContent = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : '-';
+                    tr.appendChild(dateTd);
+
+                    tbody.appendChild(tr);
+                });
+
+            } catch (error) {
+                console.error('Load error:', error);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3rem; color: var(--danger);">
+                            <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                            <p>Failed to load database. (${error.message})</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Pagination handlers
+        function changePage(direction) {
+            dbCurrentPage += direction;
+            loadLeads();
+        }
+
+        // Real-time search filter with debounce
+        function handleSearchInput(e) {
+            clearTimeout(dbSearchTimeout);
+            dbSearchQuery = e.target.value;
+            dbSearchTimeout = setTimeout(() => {
+                dbCurrentPage = 1;
+                loadLeads();
+            }, 300);
+        }
+
+        // Clear Database handler
+        async function confirmClearDatabase() {
+            if (!confirm('Are you absolutely sure you want to delete ALL leads from the collection? This action is permanent.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/cold-email/leads/clear', {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showToast(result.message, 'success');
+                    dbCurrentPage = 1;
+                    loadLeads();
+                } else {
+                    throw new Error(result.message || 'Wipe failed');
+                }
+            } catch (error) {
+                showToast('Failed to clear database: ' + error.message, 'danger');
+            }
+        }
+
+        // Toast notifications logic
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+            toast.innerHTML = `
+                <i class="fa-solid ${icon}"></i>
+                <span>${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            // Auto dismiss after 4 seconds
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) reverse forwards';
+                toast.addEventListener('animationend', () => {
+                    toast.remove();
+                });
+            }, 4000);
+        }
+    </script>
+</body>
+
+</html>
