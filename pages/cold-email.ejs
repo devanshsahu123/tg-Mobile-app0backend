@@ -873,6 +873,9 @@
                         <button class="btn btn-outline" onclick="loadLeads()">
                             <i class="fa-solid fa-rotate"></i> Refresh
                         </button>
+                        <button class="btn btn-primary" id="btn-compose" disabled onclick="openComposeModal()">
+                            <i class="fa-solid fa-envelope"></i> Compose Email
+                        </button>
                         <button class="btn btn-danger" onclick="confirmClearDatabase()">
                             <i class="fa-solid fa-trash-can"></i> Clear Database
                         </button>
@@ -884,12 +887,14 @@
                     <table class="table" id="db-leads-table">
                         <thead>
                             <tr>
+                                <th style="width: 40px;"><input type="checkbox" id="select-all-leads" onchange="toggleSelectAll(this)"></th>
                                 <th>Business Name</th>
                                 <th>Client Name</th>
                                 <th>Mobile Number</th>
                                 <th>Email</th>
                                 <th>City</th>
                                 <th>Import Date</th>
+                                <th>Sent</th>
                             </tr>
                         </thead>
                         <tbody id="db-leads-tbody">
@@ -913,6 +918,48 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compose Email Modal -->
+    <div id="compose-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div class="glass-card" style="width: 100%; max-width: 600px; padding: 2.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="font-family: var(--font-display); color: var(--text-main); margin: 0;">Compose Cold Email</h2>
+                <button onclick="closeComposeModal()" style="background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1rem; border-radius: var(--radius-md); color: #a5b4fc; font-size: 0.85rem;">
+                <i class="fa-solid fa-circle-info" style="margin-right: 0.5rem;"></i>
+                <strong>Available Variables:</strong> <code style="background: rgba(0,0,0,0.3); padding: 0.2rem 0.4rem; border-radius: 4px;">{{businessName}}</code>, <code style="background: rgba(0,0,0,0.3); padding: 0.2rem 0.4rem; border-radius: 4px;">{{clientName}}</code>, <code style="background: rgba(0,0,0,0.3); padding: 0.2rem 0.4rem; border-radius: 4px;">{{City}}</code>
+            </div>
+
+            <!-- Email Template Selection -->
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Choose Email Template Format</label>
+                <div class="select-wrapper">
+                    <select id="template-select" class="form-select" onchange="applySelectedTemplate(this.value)">
+                        <option value="">-- Write Custom Email / Custom Template --</option>
+                        <% if (typeof templates !== 'undefined' && templates.length > 0) { %>
+                            <% templates.forEach(temp => { %>
+                                <option value="<%= temp.id %>"><%= temp.name %></option>
+                            <% }) %>
+                        <% } %>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <input type="text" id="email-subject" class="search-input" style="width: 100%; margin-bottom: 1rem; padding: 1rem;" placeholder="Subject (e.g. Partnership with {{businessName}})">
+                <textarea id="email-body" class="search-input" style="width: 100%; min-height: 250px; padding: 1rem; resize: vertical; font-family: var(--font-body);" placeholder="Hi {{clientName}},\n\n..."></textarea>
+            </div>
+
+            <div class="actions-row" style="justify-content: flex-end; margin-top: 0;">
+                <button class="btn btn-outline" onclick="closeComposeModal()">Cancel</button>
+                <button class="btn btn-primary" id="btn-send-emails" onclick="sendEmails()">
+                    <i class="fa-solid fa-paper-plane"></i> Send Emails
+                </button>
             </div>
         </div>
     </div>
@@ -1300,12 +1347,17 @@
             const tbody = document.getElementById('db-leads-tbody');
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 3rem;">
+                    <td colspan="8" style="text-align: center; padding: 3rem;">
                         <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem;"></i>
                         <p style="color: var(--text-muted);">Fetching leads archive...</p>
                     </td>
                 </tr>
             `;
+
+            // Reset select all checkbox
+            const selectAllCheckbox = document.getElementById('select-all-leads');
+            if(selectAllCheckbox) selectAllCheckbox.checked = false;
+            updateComposeButton();
 
             try {
                 const url = `/cold-email/leads?page=${dbCurrentPage}&limit=${dbPageSize}&search=${encodeURIComponent(dbSearchQuery)}`;
@@ -1337,7 +1389,7 @@
                 if (leads.length === 0) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="6">
+                            <td colspan="8">
                                 <div class="empty-state">
                                     <i class="fa-solid fa-folder-open"></i>
                                     <h3>No Leads Found</h3>
@@ -1353,6 +1405,10 @@
                 leads.forEach(lead => {
                     const tr = document.createElement('tr');
                     
+                    const cbTd = document.createElement('td');
+                    cbTd.innerHTML = `<input type="checkbox" class="lead-checkbox" value="${lead._id}" onchange="updateComposeButton()">`;
+                    tr.appendChild(cbTd);
+
                     const cells = [
                         lead.businessName || '-',
                         lead.clientName || '-',
@@ -1371,6 +1427,12 @@
                     const dateTd = document.createElement('td');
                     dateTd.textContent = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : '-';
                     tr.appendChild(dateTd);
+
+                    // Add sent count
+                    const sentTd = document.createElement('td');
+                    const count = lead.emailSentCount || 0;
+                    sentTd.innerHTML = count > 0 ? `<span style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; padding: 0.2rem 0.5rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600;">${count}</span>` : `<span style="color: var(--text-muted);">-</span>`;
+                    tr.appendChild(sentTd);
 
                     tbody.appendChild(tr);
                 });
@@ -1426,6 +1488,103 @@
                 }
             } catch (error) {
                 showToast('Failed to clear database: ' + error.message, 'danger');
+            }
+        }
+
+        // Email Sending Logic
+        function toggleSelectAll(checkbox) {
+            document.querySelectorAll('.lead-checkbox').forEach(cb => cb.checked = checkbox.checked);
+            updateComposeButton();
+        }
+
+        function updateComposeButton() {
+            const checkedCount = document.querySelectorAll('.lead-checkbox:checked').length;
+            const btnCompose = document.getElementById('btn-compose');
+            
+            if (checkedCount > 0) {
+                btnCompose.disabled = false;
+                btnCompose.innerHTML = `<i class="fa-solid fa-envelope"></i> Compose Email (${checkedCount})`;
+            } else {
+                btnCompose.disabled = true;
+                btnCompose.innerHTML = `<i class="fa-solid fa-envelope"></i> Compose Email`;
+            }
+        }
+
+        const emailTemplates = <%- JSON.stringify(templates || []) %>;
+
+        function applySelectedTemplate(templateId) {
+            const subjectInput = document.getElementById('email-subject');
+            const bodyInput = document.getElementById('email-body');
+            
+            if (!templateId) {
+                subjectInput.value = '';
+                bodyInput.value = '';
+                return;
+            }
+
+            const template = emailTemplates.find(t => t.id === templateId);
+            if (template) {
+                subjectInput.value = template.subject || '';
+                bodyInput.value = template.body || '';
+            }
+        }
+
+        function openComposeModal() {
+            document.getElementById('compose-modal').style.display = 'flex';
+        }
+
+        function closeComposeModal() {
+            document.getElementById('compose-modal').style.display = 'none';
+            const templateSelect = document.getElementById('template-select');
+            if (templateSelect) templateSelect.value = '';
+            document.getElementById('email-subject').value = '';
+            document.getElementById('email-body').value = '';
+        }
+
+        async function sendEmails() {
+            const selectedIds = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
+            const subjectTemplate = document.getElementById('email-subject').value.trim();
+            const bodyTemplate = document.getElementById('email-body').value.trim();
+
+            if (selectedIds.length === 0) {
+                showToast('Please select at least one lead.', 'danger');
+                return;
+            }
+            if (!subjectTemplate || !bodyTemplate) {
+                showToast('Subject and body templates are required.', 'danger');
+                return;
+            }
+
+            const btnSend = document.getElementById('btn-send-emails');
+            const originalText = btnSend.innerHTML;
+            btnSend.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+            btnSend.disabled = true;
+
+            try {
+                const response = await fetch('/cold-email/send-emails', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ leadIds: selectedIds, subjectTemplate, bodyTemplate })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showToast(result.message, 'success');
+                    closeComposeModal();
+                    // Clear fields
+                    document.getElementById('email-subject').value = '';
+                    document.getElementById('email-body').value = '';
+                    // Reload table to show updated counts
+                    loadLeads();
+                } else {
+                    throw new Error(result.message || 'Failed to send emails');
+                }
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            } finally {
+                btnSend.innerHTML = originalText;
+                btnSend.disabled = false;
             }
         }
 

@@ -1,0 +1,8 @@
+[
+  {
+    "id": "template_partnership",
+    "name": "Business Partnership Proposal",
+    "subject": "Partnership Proposal for {{businessName}}",
+    "body": "Hi {{clientName}},\n\nI hope this email finds you well.\n\nI was looking at {{businessName}} in {{City}} and was highly impressed by your work. We are currently looking to partner with businesses in your industry to help drive new client growth.\n\nWould you be open to a brief 5-minute call next week to explore how we might collaborate?\n\nBest regards,\n[Your Name]"
+  }
+]

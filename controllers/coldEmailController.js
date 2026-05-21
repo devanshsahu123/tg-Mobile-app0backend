@@ -1,9 +1,23 @@
 const ColdEmailLead = require("../models/coldEmailLead");
+const nodemailer = require("nodemailer");
+
+const fs = require("fs");
+const path = require("path");
 
 // Render the EJS cold email dashboard page
 const renderColdEmailPage = async (req, res) => {
     try {
-        res.render("cold-email");
+        let templates = [];
+        const templatesPath = path.join(__dirname, "../cold-mail-formate.json");
+        if (fs.existsSync(templatesPath)) {
+            try {
+                const data = fs.readFileSync(templatesPath, "utf8");
+                templates = JSON.parse(data);
+            } catch (err) {
+                console.error("Error parsing cold-mail-formate.json:", err);
+            }
+        }
+        res.render("cold-email", { templates });
     } catch (error) {
         console.error("Error rendering cold email page:", error);
         res.status(500).send("Internal Server Error");
@@ -35,8 +49,9 @@ const importLeads = async (req, res) => {
         const incomingEmails  = cleanedLeads.map(l => l.email).filter(Boolean);
         const incomingMobiles = cleanedLeads.map(l => l.mobileNumber).filter(Boolean);
 
-        // Query the DB once for any records that already have these values
+        // Query the DB once for active records that already have these values
         const existing = await ColdEmailLead.find({
+            status: 0,
             $or: [
                 ...(incomingEmails.length  ? [{ email:        { $in: incomingEmails  } }] : []),
                 ...(incomingMobiles.length ? [{ mobileNumber: { $in: incomingMobiles } }] : [])
@@ -106,7 +121,7 @@ const getLeads = async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const search = req.query.search ? String(req.query.search).trim() : "";
 
-        const query = {};
+        const query = { status: 0 };
 
         if (search) {
             const searchRegex = new RegExp(search, "i");
@@ -166,9 +181,98 @@ const clearLeads = async (req, res) => {
     }
 };
 
+// Send cold emails to selected leads
+const sendColdEmails = async (req, res) => {
+    try {
+        const { leadIds, subjectTemplate, bodyTemplate } = req.body;
+
+        if (!leadIds || !Array.isArray(leadIds) || leadIds.length === 0) {
+            return res.status(400).json({ success: false, message: "No leads selected." });
+        }
+        if (!subjectTemplate || !bodyTemplate) {
+            return res.status(400).json({ success: false, message: "Subject and body templates are required." });
+        }
+
+        // Setup Nodemailer transporter
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            secure: process.env.SMTP_PORT == 465, // true for 465, false for other ports
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+            },
+        });
+
+        const leads = await ColdEmailLead.find({ _id: { $in: leadIds }, status: 0 });
+        let successCount = 0;
+        let failCount = 0;
+        const successfulLeadIds = [];
+
+        for (const lead of leads) {
+            if (!lead.email) {
+                failCount++;
+                continue; // Skip if no email
+            }
+
+            // Replace template variables
+            let subject = subjectTemplate
+                .replace(/{{businessName}}/g, lead.businessName || "")
+                .replace(/{{clientName}}/g, lead.clientName || "")
+                .replace(/{{City}}/g, lead.City || "");
+            
+            let htmlBody = bodyTemplate
+                .replace(/{{businessName}}/g, lead.businessName || "")
+                .replace(/{{clientName}}/g, lead.clientName || "")
+                .replace(/{{City}}/g, lead.City || "");
+
+            // Convert newlines to <br> for HTML email
+            htmlBody = htmlBody.replace(/\n/g, '<br>');
+
+            try {
+                await transporter.sendMail({
+                    from: process.env.SMTP_FROM,
+                    to: lead.email,
+                    subject: subject,
+                    html: htmlBody,
+                });
+                successCount++;
+                successfulLeadIds.push(lead._id);
+            } catch (err) {
+                console.error(`Failed to send email to ${lead.email}:`, err);
+                failCount++;
+            }
+        }
+
+        // Increment emailSentCount for successful sends
+        if (successfulLeadIds.length > 0) {
+            await ColdEmailLead.updateMany(
+                { _id: { $in: successfulLeadIds } },
+                { $inc: { emailSentCount: 1 } }
+            );
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Emails sent successfully. Success: ${successCount}, Failed: ${failCount}`,
+            successCount,
+            failCount
+        });
+
+    } catch (error) {
+        console.error("Error sending cold emails:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to send emails due to server error.",
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     renderColdEmailPage,
     importLeads,
     getLeads,
-    clearLeads
+    clearLeads,
+    sendColdEmails
 };

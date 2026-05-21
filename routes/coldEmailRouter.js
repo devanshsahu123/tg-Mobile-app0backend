@@ -3,7 +3,8 @@ const {
     renderColdEmailPage, 
     importLeads, 
     getLeads, 
-    clearLeads 
+    clearLeads,
+    sendColdEmails
 } = require("../controllers/coldEmailController");
 
 // Render dashboard view
@@ -17,5 +18,8 @@ router.get("/leads", getLeads);
 
 // API endpoint to clear leads
 router.delete("/leads/clear", clearLeads);
+
+// API endpoint to send emails
+router.post("/send-emails", sendColdEmails);
 
 module.exports = router;

@@ -20,6 +20,14 @@ const ColdEmailLeadSchema = new mongoose.Schema({
     City: {
         type: String,
         default: ""
+    },
+    emailSentCount: {
+        type: Number,
+        default: 0
+    },
+    status: {
+        type: Number,
+        default: 0 // 0: Active, 1: Deleted
     }
 }, { 
     timestamps: true 
