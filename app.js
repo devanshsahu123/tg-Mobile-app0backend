@@ -24,6 +24,10 @@ app.get("/", (req, res) => {
   res.render("Right-Review");
 });
 
+app.get("/admin", (req, res) => {
+  res.render("admin");
+});
+
 
 app.get("/app-ads.txt", (req, res) => {
   res.setHeader("Content-Type", "text/plain");

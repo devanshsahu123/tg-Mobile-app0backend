@@ -238,11 +238,40 @@ const approveGroupStatus = async (req, res) => {
     }
 }
 
+const bulkUpdateStatus = async (req, res) => {
+    try {
+        const { groupIds, status } = req.body;
+        if (!Array.isArray(groupIds) || groupIds.length === 0) {
+            throw new Error('groupIds must be a non-empty array');
+        }
+        if (![0, 1, 2].includes(Number(status))) {
+            throw new Error('Invalid status value. Must be 0, 1, or 2');
+        }
+
+        const result = await waGroupModel.updateMany(
+            { _id: { $in: groupIds } },
+            { $set: { status: Number(status) } }
+        );
+
+        return res.status(200).send({
+            status: 200,
+            message: `Successfully updated ${result.modifiedCount} group(s)`,
+            data: { modifiedCount: result.modifiedCount }
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(400).send({
+            status: 400,
+            message: error.message
+        });
+    }
+}
+
 const renderAdminPage = (req, res) => {
     return res.render(path.join(__dirname, "../pages/wa-admin.ejs"));
 }
 
 
 module.exports = {
-    fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin, approveGroupStatus, renderAdminPage
+    fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin, approveGroupStatus, bulkUpdateStatus, renderAdminPage
 }
