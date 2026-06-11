@@ -864,10 +864,17 @@
         <!-- Tab Panel: Leads Database -->
         <div id="panel-database" class="tab-panel">
             <div class="glass-card">
-                <div class="db-header">
-                    <div class="search-box-wrapper">
+                <div class="db-header" style="flex-wrap: wrap; gap: 1rem;">
+                    <div class="search-box-wrapper" style="flex-grow: 1; min-width: 250px;">
                         <i class="fa-solid fa-magnifying-glass"></i>
                         <input type="text" id="db-search" class="search-input" placeholder="Search leads by name, email, city..." oninput="handleSearchInput(event)">
+                    </div>
+                    <div class="select-wrapper" style="width: 200px;">
+                        <select id="db-sent-filter" class="form-select" onchange="handleSentFilterChange()">
+                            <option value="all">All Emailed Statuses</option>
+                            <option value="never">Never Emailed (0)</option>
+                            <option value="sent">Emailed (1+)</option>
+                        </select>
                     </div>
                     <div class="db-actions">
                         <button class="btn btn-outline" onclick="loadLeads()">
@@ -1338,7 +1345,7 @@
 
         // Global states for Database View
         let dbCurrentPage = 1;
-        let dbPageSize = 10;
+        let dbPageSize = 1000;
         let dbSearchQuery = '';
         let dbSearchTimeout = null;
 
@@ -1360,7 +1367,8 @@
             updateComposeButton();
 
             try {
-                const url = `/cold-email/leads?page=${dbCurrentPage}&limit=${dbPageSize}&search=${encodeURIComponent(dbSearchQuery)}`;
+                const sentFilter = document.getElementById('db-sent-filter').value;
+                const url = `/cold-email/leads?page=${dbCurrentPage}&limit=${dbPageSize}&search=${encodeURIComponent(dbSearchQuery)}&sentFilter=${sentFilter}`;
                 const response = await fetch(url);
                 const result = await response.json();
 
@@ -1464,6 +1472,12 @@
                 dbCurrentPage = 1;
                 loadLeads();
             }, 300);
+        }
+
+        // Handle Sent Count filter dropdown change
+        function handleSentFilterChange() {
+            dbCurrentPage = 1;
+            loadLeads();
         }
 
         // Clear Database handler

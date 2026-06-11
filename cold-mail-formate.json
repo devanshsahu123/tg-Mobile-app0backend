@@ -1,8 +1,14 @@
 [
   {
-    "id": "template_partnership",
-    "name": "Business Partnership Proposal",
-    "subject": "Partnership Proposal for {{businessName}}",
-    "body": "Hi {{clientName}},\n\nI hope this email finds you well.\n\nI was looking at {{businessName}} in {{City}} and was highly impressed by your work. We are currently looking to partner with businesses in your industry to help drive new client growth.\n\nWould you be open to a brief 5-minute call next week to explore how we might collaborate?\n\nBest regards,\n[Your Name]"
+    "id": "template_permission_first",
+    "name": "Ask Before Building (Zero Burden)",
+    "subject": "A Simple Website Can Bring More Customers?",
+    "body": "Hi {{clientName}},\n\nI found your business on Google today. You have a great profile!\n\nI noticed your business doesn’t currently have a website. Having a simple website is one of the easiest ways to build trust, attract more customers, and give your business a more professional online presence.\n\nI would love to create a free design mockup to show how professional your business could look online.\n\nIf you're interested, we can schedule a quick demo call where I can show you a sample based on your requirements. If you like it, we can discuss things further from there.\n\nLet me know if you'd like to see a sample.\n\nBest,\nDevansh Sahu"
+  },
+   {
+    "id": "template_thumbnail_priority",
+    "name": "Thumbnail First Outreach",
+    "subject": "Thumbnail Design Idea For Your Channel",
+    "body": "Hi {{clientName}},\n\nI recently came across your content and really liked your work.\n\nI specialize in YouTube thumbnail design and create high-quality, eye-catching thumbnails designed to improve clicks and engagement on videos.\n\nI’d love to share a few sample thumbnail ideas based on your content style. If you'd like, I can also share some of my previous work here.\n\nAlso, if you ever plan to improve, redesign, or create a website for your brand, I can help with that as well based on your requirements.\n\nBest,\nDevansh Sahu"
   }
 ]

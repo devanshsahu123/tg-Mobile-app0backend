@@ -1,0 +1,14 @@
+[
+  {
+    "id": "template_wa_intro",
+    "name": "Business Mockup Pitch (WhatsApp)",
+    "subject": "Website Mockup for {{businessName}}",
+    "body": "Hi {{clientName}},\n\nI found your business, {{businessName}} in {{City}}, on Google and loved your profile!\n\nI noticed you don't have a website listed. A simple mobile-friendly website can help get you more customers.\n\nI'd love to make a free mockup design for your business. Let me know if you want to see a quick sample.\n\nBest,\nDevansh"
+  },
+  {
+    "id": "template_wa_quick_check",
+    "name": "Quick Feedback Check",
+    "subject": "Quick Question",
+    "body": "Hey {{clientName}},\n\nHope you're doing well! I'm Devansh.\n\nI saw {{businessName}} in {{City}} and had a quick suggestion for boosting your online search presence. \n\nDo you have 2 minutes for a quick chat? Or should I drop a short proposal here?\n\nThanks!"
+  }
+]

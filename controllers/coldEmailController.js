@@ -120,8 +120,15 @@ const getLeads = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const search = req.query.search ? String(req.query.search).trim() : "";
+        const sentFilter = req.query.sentFilter ? String(req.query.sentFilter).trim() : "all";
 
         const query = { status: 0 };
+
+        if (sentFilter === "never") {
+            query.emailSentCount = 0;
+        } else if (sentFilter === "sent") {
+            query.emailSentCount = { $gt: 0 };
+        }
 
         if (search) {
             const searchRegex = new RegExp(search, "i");
@@ -221,20 +228,42 @@ const sendColdEmails = async (req, res) => {
                 .replace(/{{clientName}}/g, lead.clientName || "")
                 .replace(/{{City}}/g, lead.City || "");
             
-            let htmlBody = bodyTemplate
+            const rawBody = bodyTemplate
                 .replace(/{{businessName}}/g, lead.businessName || "")
                 .replace(/{{clientName}}/g, lead.clientName || "")
                 .replace(/{{City}}/g, lead.City || "");
 
-            // Convert newlines to <br> for HTML email
-            htmlBody = htmlBody.replace(/\n/g, '<br>');
+            // Format body paragraphs with professional styles
+            const paragraphs = rawBody.split("\n");
+            const formattedBody = paragraphs.map(p => {
+                const trimmed = p.trim();
+                if (!trimmed) return "<br>";
+                return `<p style="margin: 0 0 16px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #2d3748;">${trimmed}</p>`;
+            }).join("");
+
+            // Wrap email in a professional layout
+            const emailHtml = `
+                <div style="background-color: #f7fafc; padding: 30px 15px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);">
+                        <div style="margin-bottom: 25px;">
+                            <span style="display: inline-block; padding: 4px 12px; background-color: #ebf8ff; color: #2b6cb0; border-radius: 9999px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Message Proposal</span>
+                        </div>
+                        <div style="margin-top: 0;">
+                            ${formattedBody}
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #a0aec0;">
+                        <p style="margin: 0 0 4px 0;">This inquiry was sent to ${lead.businessName || 'your business'} at ${lead.email}.</p>
+                    </div>
+                </div>
+            `;
 
             try {
                 await transporter.sendMail({
                     from: process.env.SMTP_FROM,
                     to: lead.email,
                     subject: subject,
-                    html: htmlBody,
+                    html: emailHtml,
                 });
                 successCount++;
                 successfulLeadIds.push(lead._id);
