@@ -33,6 +33,11 @@ app.get("/admin/child-safety/:appName", (req, res) => {
   res.render("child-safety-standards", { appName });
 });
 
+app.get("/admin/privacy/:appName", (req, res) => {
+  const appName = req.params.appName.replace(/-/g, ' ');
+  res.render("privacy", { appName });
+});
+
 
 app.get("/app-ads.txt", (req, res) => {
   res.setHeader("Content-Type", "text/plain");
