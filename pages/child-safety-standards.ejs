@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Child Safety Standards - <%= appName %>
+    </title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --white: #ffffff;
+            --text-secondary: #94a3b8;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--secondary);
+            color: var(--white);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 60px 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .brand-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .brand-icon svg {
+            width: 32px;
+            height: 32px;
+            color: var(--white);
+        }
+
+        .brand-text {
+            font-size: 36px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--white) 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: block;
+        }
+
+        .header-tagline {
+            color: var(--text-secondary);
+            font-size: 18px;
+            margin-top: 12px;
+            font-weight: 400;
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--surface-light), transparent);
+            margin: 40px 0;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--white);
+            margin-bottom: 20px;
+            margin-top: 30px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        h2:first-of-type {
+            margin-top: 0;
+        }
+
+        h2 svg {
+            color: var(--primary);
+            width: 24px;
+            height: 24px;
+        }
+
+        .danger-icon {
+            color: var(--danger) !important;
+        }
+
+        p {
+            color: var(--text-secondary);
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        ul {
+            color: var(--text-secondary);
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+            padding-left: 24px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .highlight {
+            color: var(--white);
+            font-weight: 600;
+        }
+
+        .contact-box {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 30px;
+        }
+
+        .contact-box p {
+            margin-bottom: 10px;
+        }
+
+        .contact-box p:last-child {
+            margin-bottom: 0;
+        }
+
+        .contact-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .contact-link:hover {
+            text-decoration: underline;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 45px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            letter-spacing: 0.3px;
+        }
+
+        @media (max-width: 600px) {
+            .card {
+                padding: 24px;
+            }
+
+            .brand-text {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="brand-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+                </svg>
+            </div>
+            <span class="brand-text">Child Safety Standards</span>
+            <p class="header-tagline">Commitment to protecting minors</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="card">
+            <h2>
+                <svg class="danger-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Zero-Tolerance Policy
+            </h2>
+            <p>
+                At <span class="highlight">Devansh Sahu</span>, the developer of <span class="highlight">
+                    <%= appName %>
+                </span>, we have a strict, zero-tolerance policy against Child Sexual Abuse and Exploitation (CSAE) and
+                Child Sexual Abuse Material (CSAM).
+            </p>
+            <p>
+                The safety of minors is our highest priority. We explicitly prohibit the distribution, sharing,
+                promotion, and creation of any content that endangers children. Our application strictly complies with
+                Google Play's Child Safety Standards policy.
+            </p>
+
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Enforcement Actions
+            </h2>
+            <p>If we become aware of any user engaging in activities related to CSAE or CSAM, we will take the following
+                immediate actions:</p>
+            <ul>
+                <li>Permanent suspension and banning of the user's account and access to <span class="highlight">
+                        <%= appName %>
+                    </span> without prior notice.</li>
+                <li>Immediate removal and preservation of the offending content for investigation.</li>
+                <li>Reporting the individual and the incident to relevant law enforcement agencies and international
+                    authorities such as the National Center for Missing & Exploited Children (NCMEC).</li>
+            </ul>
+
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                App & Developer Information
+            </h2>
+            <p>
+                This policy is relevant to the Google Play Store application <span class="highlight">
+                    <%= appName %>
+                </span>, published by the developer <span class="highlight">Devansh Sahu</span>.
+            </p>
+
+            <div class="contact-box">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Child Safety Point of Contact
+                </h2>
+                <p>
+                    If you encounter any content within <span class="highlight">
+                        <%= appName %>
+                    </span> that violates these standards, or if you have concerns regarding child safety, please
+                    contact us immediately. We monitor this inbox actively for rapid response.
+                </p>
+                <p>
+                    <strong>Email:</strong> <a href="mailto:devanshsahu7000@gmail.com"
+                        class="contact-link">devanshsahu7000@gmail.com</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            &copy; 2024 Devansh Sahu. All rights reserved.
+        </div>
+    </div>
+</body>
+
+</html>
