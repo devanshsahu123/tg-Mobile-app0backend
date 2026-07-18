@@ -1,4 +1,13 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+// Use AWS VPC DNS (169.254.169.253) as primary, with public DNS as fallback
+// This is required for Bun on AWS EC2 to resolve MongoDB SRV records
+try {
+  dns.setServers(['169.254.169.253', '8.8.8.8', '1.1.1.1']);
+} catch (e) {
+  console.warn('Could not set DNS servers:', e);
+}
 
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
