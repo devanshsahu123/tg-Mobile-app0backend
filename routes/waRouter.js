@@ -1,4 +1,4 @@
-const { addGorup, fetchUrl, myGroups, getGroups, approveGroup, getGroupsForAdmin, increaseViews, approveGroupStatus, bulkUpdateStatus, renderAdminPage } = require('../controllers/waController');
+const { addGorup, fetchUrl, myGroups, getGroups, approveGroup, getGroupsForAdmin, increaseViews, approveGroupStatus, bulkUpdateStatus, renderAdminPage, cleanupBrokenImageGroups, permanentDeleteGroup } = require('../controllers/waController');
 const router = require('express').Router()
 
 router.get('/fetchUrl', fetchUrl);
@@ -16,5 +16,7 @@ router.get('/admin/getGroups', getGroupsForAdmin);
 router.post('/admin/updateStatus', approveGroupStatus);
 router.post('/admin/bulkUpdateStatus', bulkUpdateStatus);
 router.get('/admin/page', renderAdminPage)
+router.get('/admin/cleanupBrokenImages', cleanupBrokenImageGroups)
+router.delete('/admin/permanentDelete/:groupId', permanentDeleteGroup)
 
 module.exports = router;

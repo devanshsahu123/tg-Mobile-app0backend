@@ -279,6 +279,36 @@ const renderAdminPage = async (req, res) => {
 }
 
 
+/**
+ * permanentDeleteGroup
+ * Permanently removes a single TG group document from the DB.
+ * Intended for admin use on rejected groups.
+ *
+ * DELETE /admin/permanentDelete/:groupId
+ */
+const permanentDeleteGroup = async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        if (!groupId) throw new Error('groupId is required');
+
+        const deleted = await tgGroupModel.findByIdAndDelete(groupId);
+        if (!deleted) throw new Error('Group not found or already deleted');
+
+        return res.status(200).send({
+            status: 200,
+            message: `Group "${deleted.name}" permanently deleted`,
+            data: { _id: deleted._id, name: deleted.name }
+        });
+    } catch (error) {
+        console.log('[TG PermanentDelete] Error:', error);
+        return res.status(400).send({
+            status: 400,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
-    fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin, approveGroupStatus, bulkUpdateStatus, renderAdminPage
+    fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin,
+    approveGroupStatus, bulkUpdateStatus, renderAdminPage, permanentDeleteGroup
 }

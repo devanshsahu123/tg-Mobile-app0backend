@@ -23,6 +23,9 @@
             --danger: #ef4444;
             --warning: #f59e0b;
             --info: #3b82f6;
+            --deleted: #6b21a8;
+            --deleted-light: #f5f3ff;
+            --deleted-border: #c4b5fd;
             --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -88,6 +91,15 @@
         .btn-warning:hover:not(:disabled)  { background: #d97706; transform: translateY(-1px); }
         .btn-ghost    { background: transparent; color: var(--text-muted); border-color: transparent; }
         .btn-ghost:hover:not(:disabled)    { background: var(--bg-main); color: var(--text-main); }
+        .btn-delete-forever {
+            background: #450a0a; color: #fca5a5;
+            border: 1px solid #7f1d1d;
+        }
+        .btn-delete-forever:hover:not(:disabled) {
+            background: #991b1b; color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(153,27,27,.5);
+        }
         .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; }
 
         /* ── View Toggle ── */
@@ -321,6 +333,103 @@
         .toast-info    { background: #eff6ff; border: 1px solid #93c5fd; color: #1e40af; }
         @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* ── Cleanup / Deleted Tab ── */
+        .btn-cleanup {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: #fff;
+            border: none;
+        }
+        .btn-cleanup:hover:not(:disabled) {
+            background: linear-gradient(135deg, #6d28d9, #5b21b6);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(109,40,217,.4);
+        }
+        .btn-cleanup.running { opacity: 0.7; cursor: not-allowed; }
+
+        .cleanup-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .summary-card {
+            background: var(--bg-card);
+            border-radius: 1rem;
+            padding: 1.25rem 1.5rem;
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .summary-card.danger  { border-color: #fca5a5; background: #fef2f2; }
+        .summary-card.success { border-color: #6ee7b7; background: #ecfdf5; }
+        .summary-card.purple  { border-color: var(--deleted-border); background: var(--deleted-light); }
+        .summary-card .sc-num {
+            font-size: 2rem; font-weight: 800; line-height: 1;
+            margin-bottom: 0.25rem;
+        }
+        .summary-card.danger  .sc-num { color: var(--danger); }
+        .summary-card.success .sc-num { color: var(--success); }
+        .summary-card.purple  .sc-num { color: var(--deleted); }
+        .summary-card .sc-label { font-size: 0.8125rem; font-weight: 600; color: var(--text-muted); }
+
+        .deleted-list {
+            background: var(--bg-card);
+            border-radius: 1rem;
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+        .deleted-list-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            font-weight: 700; font-size: 0.875rem;
+            display: flex; align-items: center; gap: 0.5rem;
+            color: var(--deleted);
+            background: var(--deleted-light);
+        }
+        .deleted-item {
+            display: flex; align-items: center; gap: 1rem;
+            padding: 0.875rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.12s;
+        }
+        .deleted-item:last-child { border-bottom: none; }
+        .deleted-item:hover { background: var(--deleted-light); }
+        .deleted-thumb {
+            width: 44px; height: 44px;
+            border-radius: 0.5rem; object-fit: cover;
+            flex-shrink: 0; background: #f1f5f9;
+            border: 2px solid var(--deleted-border);
+            filter: grayscale(60%);
+        }
+        .deleted-info { flex: 1; min-width: 0; }
+        .deleted-name { font-weight: 700; font-size: 0.875rem; color: var(--text-main); }
+        .deleted-img-url {
+            font-size: 0.72rem; color: var(--danger);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            max-width: 420px;
+        }
+        .deleted-badge {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            padding: 0.2rem 0.6rem;
+            background: #fee2e2; color: var(--danger);
+            border-radius: 9999px; font-size: 0.7rem; font-weight: 700;
+            white-space: nowrap; flex-shrink: 0;
+        }
+        .nav-tab.deleted-tab.active {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            box-shadow: 0 2px 8px rgba(109,40,217,.35);
+        }
+        .cleanup-info-banner {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+            background: var(--deleted-light);
+            border: 1px solid var(--deleted-border);
+            border-radius: 0.75rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.8125rem; color: var(--deleted);
+        }
+        .cleanup-info-banner strong { font-weight: 700; }
+
         @media (max-width: 768px) {
             .layout { padding: 1rem; }
             .header { flex-direction: column; gap: 1rem; text-align: center; }
@@ -370,6 +479,15 @@
                     </svg>
                     Refresh
                 </button>
+                <button class="btn btn-cleanup" id="cleanup-btn" onclick="openDeletedTab(event)" title="Delete pending groups with broken images">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6l-1 14H6L5 6"/>
+                        <path d="M10 11v6M14 11v6"/>
+                        <path d="M9 6V4h6v2"/>
+                    </svg>
+                    Cleanup
+                </button>
             </div>
         </header>
 
@@ -383,6 +501,9 @@
             </button>
             <button class="nav-tab" id="tab-rejected" onclick="switchTab('rejected', 2, event)">
                 ❌ Rejected <span class="badge" id="rejected-count">0</span>
+            </button>
+            <button class="nav-tab deleted-tab" id="tab-deleted" onclick="openDeletedTab(event)">
+                🗑️ Deleted <span class="badge" id="deleted-count">—</span>
             </button>
         </nav>
 
@@ -433,9 +554,11 @@
     <script>
         let currentStatus = 0;
         let currentTabName = 'pending';
-        let groupsData = { pending: [], approved: [], rejected: [] };
+        let groupsData = { pending: [], approved: [], rejected: [], deleted: [] };
         let selectedIds = new Set();
         let currentView = 'list'; // 'card' | 'list'
+        let cleanupRunning = false;
+        let lastCleanupResult = null; // cache last cleanup result
 
         window.onload = () => loadGroups(0, 'pending');
 
@@ -454,6 +577,8 @@
             clearSelection();
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             event.currentTarget.classList.add('active');
+            // Hide bulk bar for non-group tabs
+            if (tabName === 'deleted') return; // handled by openDeletedTab
             loadGroups(status, tabName);
         }
 
@@ -561,6 +686,11 @@
                                 ${status !== 1 ? `<button class="btn btn-success" onclick="updateStatus('${g._id}', 1)">✓ Approve</button>` : ''}
                                 ${status !== 2 ? `<button class="btn btn-danger"  onclick="updateStatus('${g._id}', 2)">✕ Reject</button>` : ''}
                                 ${status !== 0 ? `<button class="btn btn-warning" onclick="updateStatus('${g._id}', 0)">⏳ Pend</button>` : ''}
+                                ${status === 2 ? `<button class="btn btn-delete-forever" onclick="permanentDelete('${g._id}', '${escapeHtml(g.name).replace(/'/g, "\\'")}')"
+                                    title="Permanently delete this group">
+                                    <svg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><polyline points='3 6 5 6 21 6'/><path d='M19 6l-1 14H6L5 6'/><path d='M10 11v6M14 11v6'/></svg>
+                                    Delete Forever
+                                </button>` : ''}
                             </div>
                         </div>`).join('')}
                 </div>`;
@@ -605,6 +735,10 @@
                                             ${status !== 1 ? `<button class="btn btn-success btn-sm" onclick="updateStatus('${g._id}', 1)" title="Approve">✓</button>` : ''}
                                             ${status !== 2 ? `<button class="btn btn-danger btn-sm"  onclick="updateStatus('${g._id}', 2)" title="Reject">✕</button>` : ''}
                                             ${status !== 0 ? `<button class="btn btn-warning btn-sm" onclick="updateStatus('${g._id}', 0)" title="Move to Pending">⏳</button>` : ''}
+                                            ${status === 2 ? `<button class="btn btn-delete-forever btn-sm" onclick="permanentDelete('${g._id}', '${escapeHtml(g.name).replace(/'/g, "\\'")}')"
+                                                title="Permanently delete">
+                                                <svg width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><polyline points='3 6 5 6 21 6'/><path d='M19 6l-1 14H6L5 6'/></svg>
+                                            </button>` : ''}
                                         </div>
                                     </td>
                                 </tr>`).join('')}
@@ -726,6 +860,199 @@
                 console.error('Bulk action error:', error);
                 showToast(error.message || 'Bulk action failed', 'error');
             }
+        }
+
+        /* ── Permanent Delete ── */
+        async function permanentDelete(groupId, groupName) {
+            const confirmed = confirm(`⚠️ PERMANENT DELETE\n\nAre you sure you want to permanently delete:\n"${groupName}"\n\nThis action CANNOT be undone!`);
+            if (!confirmed) return;
+
+            const card = document.getElementById(`group-${groupId}`);
+            const row  = document.getElementById(`row-${groupId}`);
+            if (card) { card.style.opacity = '0.4'; card.style.pointerEvents = 'none'; }
+            if (row)  { row.style.opacity  = '0.4'; row.style.pointerEvents  = 'none'; }
+
+            try {
+                const response = await fetch(`/wa/admin/permanentDelete/${groupId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || 'Delete failed');
+
+                // Animate out then remove from local data
+                if (card) { card.style.transform = 'scale(0.9)'; card.style.opacity = '0'; card.style.transition = 'all 0.25s'; }
+                if (row)  { row.style.opacity = '0'; row.style.transition = 'opacity 0.25s'; }
+
+                // Remove from local groupsData and refresh counts
+                groupsData[currentTabName] = groupsData[currentTabName].filter(g => g._id !== groupId);
+                updateTabCount(currentTabName, groupsData[currentTabName].length);
+                document.getElementById('count-label').textContent =
+                    `${groupsData[currentTabName].length} group${groupsData[currentTabName].length !== 1 ? 's' : ''}`;
+
+                setTimeout(() => {
+                    if (card) card.remove();
+                    if (row)  row.remove();
+                    if (groupsData[currentTabName].length === 0) refreshCurrentTab();
+                }, 280);
+
+                showToast(`"​${groupName}​" permanently deleted`, 'success');
+            } catch (error) {
+                console.error('[WA PermanentDelete]', error);
+                showToast('Delete failed: ' + error.message, 'error');
+                if (card) { card.style.opacity = '1'; card.style.pointerEvents = ''; }
+                if (row)  { row.style.opacity  = '1'; row.style.pointerEvents  = ''; }
+            }
+        }
+
+        /* ══════════════════════════════════════════
+           CLEANUP / DELETED TAB
+        ══════════════════════════════════════════ */
+
+        /**
+         * openDeletedTab — switches UI to Deleted tab and runs cleanup if needed
+         */
+        async function openDeletedTab(event) {
+            if (cleanupRunning) { showToast('Cleanup is already running…', 'info'); return; }
+
+            // Update tab UI
+            currentTabName = 'deleted';
+            clearSelection();
+            document.getElementById('toolbar').style.display = 'none';
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            const deletedTab = document.getElementById('tab-deleted');
+            if (deletedTab) deletedTab.classList.add('active');
+
+            const contentArea = document.getElementById('content-area');
+
+            // If we already have a result cached, just show it
+            if (lastCleanupResult) {
+                renderDeletedView(lastCleanupResult, contentArea);
+                return;
+            }
+
+            // Run cleanup
+            cleanupRunning = true;
+            const cleanupBtn = document.getElementById('cleanup-btn');
+            if (cleanupBtn) { cleanupBtn.classList.add('running'); cleanupBtn.disabled = true; }
+
+            contentArea.innerHTML = `
+                <div class="loading-container">
+                    <div class="spinner" style="border-top-color:#7c3aed"></div>
+                    <p style="color:#7c3aed;font-weight:600">Running image cleanup on pending groups…</p>
+                    <p style="font-size:0.8125rem;color:var(--text-muted);margin-top:0.5rem">Checking each group's image URL. This may take a moment.</p>
+                </div>`;
+
+            try {
+                const response = await fetch('/wa/admin/cleanupBrokenImages');
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || 'Cleanup failed');
+
+                lastCleanupResult = result.data;
+                groupsData.deleted = result.data.deletedGroups || [];
+                document.getElementById('deleted-count').textContent = result.data.deleted || 0;
+                renderDeletedView(result.data, contentArea);
+                if (result.data.deleted > 0) {
+                    showToast(`${result.data.deleted} group(s) permanently deleted`, 'success');
+                    // refresh pending count
+                    loadGroupCountSilently(0, 'pending');
+                } else {
+                    showToast('Cleanup complete — no broken images found', 'info');
+                }
+            } catch (error) {
+                console.error('[Cleanup] Error:', error);
+                contentArea.innerHTML = `
+                    <div class="empty-state">
+                        <h3 style="color:var(--danger)">Cleanup Failed</h3>
+                        <p>${escapeHtml(error.message)}</p>
+                        <button class="btn btn-cleanup" style="margin-top:1rem" onclick="lastCleanupResult=null;openDeletedTab(event)">Retry</button>
+                    </div>`;
+                showToast('Cleanup failed: ' + error.message, 'error');
+            } finally {
+                cleanupRunning = false;
+                if (cleanupBtn) { cleanupBtn.classList.remove('running'); cleanupBtn.disabled = false; }
+            }
+        }
+
+        /** Silently reload a tab's count badge without changing the view */
+        async function loadGroupCountSilently(status, tabName) {
+            try {
+                const r = await fetch(`/wa/admin/getGroups?status=${status}`);
+                const result = await r.json();
+                const data = result.data || [];
+                groupsData[tabName] = data;
+                updateTabCount(tabName, data.length);
+            } catch (_) {}
+        }
+
+        /**
+         * Render the deleted tab result view
+         */
+        function renderDeletedView(data, container) {
+            const { checked = 0, deleted = 0, deletedGroups = [] } = data;
+            const safe = checked - deleted;
+
+            const deletedRows = deletedGroups.length === 0
+                ? `<div style="padding:3rem 2rem;text-align:center;color:var(--text-muted)">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="margin-bottom:0.75rem;color:#22c55e">
+                            <path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/>
+                        </svg>
+                        <p style="font-weight:600;color:#15803d">All images are intact — nothing was deleted.</p>
+                   </div>`
+                : deletedGroups.map(g => `
+                    <div class="deleted-item">
+                        <img src="${escapeHtml(g.image || '')}"
+                             class="deleted-thumb"
+                             onerror="this.src='https://via.placeholder.com/44?text=404'" alt="">
+                        <div class="deleted-info">
+                            <div class="deleted-name">${escapeHtml(g.name || 'Unknown Group')}</div>
+                            <div class="deleted-img-url" title="${escapeHtml(g.image || '')}">
+                                🔗 ${escapeHtml(g.image || 'No image URL')}
+                            </div>
+                        </div>
+                        <span class="deleted-badge">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                            Image not found
+                        </span>
+                    </div>`).join('');
+
+            container.innerHTML = `
+                <div class="cleanup-info-banner">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <span>Cleanup scanned <strong>${checked}</strong> pending group(s) and permanently deleted <strong>${deleted}</strong> with broken/missing images.
+                    &nbsp;<button style="font-size:0.75rem;font-weight:600;color:var(--deleted);background:none;border:none;cursor:pointer;text-decoration:underline" onclick="lastCleanupResult=null;openDeletedTab(event)">Run again ↺</button></span>
+                </div>
+
+                <div class="cleanup-summary">
+                    <div class="summary-card purple">
+                        <div class="sc-num">${checked}</div>
+                        <div class="sc-label">Groups Checked</div>
+                    </div>
+                    <div class="summary-card danger">
+                        <div class="sc-num">${deleted}</div>
+                        <div class="sc-label">Permanently Deleted</div>
+                    </div>
+                    <div class="summary-card success">
+                        <div class="sc-num">${safe}</div>
+                        <div class="sc-label">Images OK</div>
+                    </div>
+                </div>
+
+                ${ deleted > 0 ? `
+                <div class="deleted-list">
+                    <div class="deleted-list-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14H6L5 6"/>
+                            <path d="M10 11v6M14 11v6"/>
+                        </svg>
+                        Permanently Deleted Groups (${deleted})
+                    </div>
+                    ${deletedRows}
+                </div>` : deletedRows }
+            `;
         }
 
         /* ── Toast ── */

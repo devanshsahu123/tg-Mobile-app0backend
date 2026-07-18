@@ -4,6 +4,25 @@ const cheerio = require('cheerio');
 const waGroupModel = require("../models/waGroups");
 const path = require('path');
 
+/**
+ * Checks whether an image URL is reachable by sending a HEAD request.
+ * Returns true if the image is accessible (HTTP 2xx), false otherwise.
+ */
+async function isImageAccessible(imageUrl) {
+    try {
+        const response = await axios.head(imageUrl, {
+            timeout: 8000,
+            headers: {
+                "User-Agent":
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+            },
+        });
+        return response.status >= 200 && response.status < 300;
+    } catch (_err) {
+        return false;
+    }
+}
+
 
 async function fetchWaGroupByUrl(url) {
     try {
@@ -271,7 +290,92 @@ const renderAdminPage = (req, res) => {
     return res.render(path.join(__dirname, "../pages/wa-admin.ejs"));
 }
 
+/**
+ * cleanupBrokenImageGroups
+ * Scans every pending-approval group (status = 0), checks if its image URL
+ * is reachable, and auto-deletes groups whose image is broken / missing.
+ *
+ * GET /admin/cleanupBrokenImages
+ */
+const cleanupBrokenImageGroups = async (req, res) => {
+    try {
+        // Fetch all groups that are still pending approval
+        const pendingGroups = await waGroupModel
+            .find({ status: 0 })
+            .select('_id name image');
+
+        if (pendingGroups.length === 0) {
+            return res.status(200).send({
+                status: 200,
+                message: 'No pending groups to check.',
+                data: { checked: 0, deleted: 0, deletedGroups: [] }
+            });
+        }
+
+        const deletedGroups = [];
+
+        // Check each group's image URL in parallel
+        await Promise.all(
+            pendingGroups.map(async (group) => {
+                const imageOk = group.image && await isImageAccessible(group.image);
+                if (!imageOk) {
+                    await waGroupModel.findByIdAndDelete(group._id);
+                    deletedGroups.push({ _id: group._id, name: group.name, image: group.image });
+                    console.log(`[WA Cleanup] Deleted group "${group.name}" — image not accessible: ${group.image}`);
+                }
+            })
+        );
+
+        return res.status(200).send({
+            status: 200,
+            message: `Cleanup complete. ${deletedGroups.length} group(s) deleted out of ${pendingGroups.length} checked.`,
+            data: {
+                checked: pendingGroups.length,
+                deleted: deletedGroups.length,
+                deletedGroups
+            }
+        });
+    } catch (error) {
+        console.log('[WA Cleanup] Error:', error);
+        return res.status(500).send({
+            status: 500,
+            message: error.message
+        });
+    }
+}
+
+
+/**
+ * permanentDeleteGroup
+ * Permanently removes a single group document from the DB.
+ * Intended for admin use on rejected groups.
+ *
+ * DELETE /admin/permanentDelete/:groupId
+ */
+const permanentDeleteGroup = async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        if (!groupId) throw new Error('groupId is required');
+
+        const deleted = await waGroupModel.findByIdAndDelete(groupId);
+        if (!deleted) throw new Error('Group not found or already deleted');
+
+        return res.status(200).send({
+            status: 200,
+            message: `Group "${deleted.name}" permanently deleted`,
+            data: { _id: deleted._id, name: deleted.name }
+        });
+    } catch (error) {
+        console.log('[WA PermanentDelete] Error:', error);
+        return res.status(400).send({
+            status: 400,
+            message: error.message
+        });
+    }
+};
 
 module.exports = {
-    fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin, approveGroupStatus, bulkUpdateStatus, renderAdminPage
+    fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin,
+    approveGroupStatus, bulkUpdateStatus, renderAdminPage, cleanupBrokenImageGroups,
+    permanentDeleteGroup
 }
