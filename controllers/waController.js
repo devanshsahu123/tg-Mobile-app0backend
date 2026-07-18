@@ -374,8 +374,38 @@ const permanentDeleteGroup = async (req, res) => {
     }
 };
 
+/**
+ * bulkPermanentDelete
+ * Permanently removes multiple rejected group documents from the DB.
+ *
+ * POST /admin/bulkPermanentDelete
+ * Body: { groupIds: ["id1", "id2", ...] }
+ */
+const bulkPermanentDelete = async (req, res) => {
+    try {
+        const { groupIds } = req.body;
+        if (!Array.isArray(groupIds) || groupIds.length === 0) {
+            throw new Error('groupIds must be a non-empty array');
+        }
+
+        const result = await waGroupModel.deleteMany({ _id: { $in: groupIds } });
+
+        return res.status(200).send({
+            status: 200,
+            message: `${result.deletedCount} group(s) permanently deleted`,
+            data: { deletedCount: result.deletedCount }
+        });
+    } catch (error) {
+        console.log('[WA BulkPermanentDelete] Error:', error);
+        return res.status(400).send({
+            status: 400,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin,
     approveGroupStatus, bulkUpdateStatus, renderAdminPage, cleanupBrokenImageGroups,
-    permanentDeleteGroup
+    permanentDeleteGroup, bulkPermanentDelete
 }

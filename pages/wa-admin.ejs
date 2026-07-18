@@ -172,6 +172,8 @@
         .bulk-btn-pend:hover    { background: #d97706; }
         .bulk-btn-clear   { background: rgba(255,255,255,0.15); color: #fff; }
         .bulk-btn-clear:hover   { background: rgba(255,255,255,0.25); }
+        .bulk-btn-delete-forever { background: #450a0a; color: #fca5a5; border: 1px solid rgba(252,165,165,0.3); }
+        .bulk-btn-delete-forever:hover { background: #991b1b; color: #fff; box-shadow: 0 2px 8px rgba(153,27,27,.6); }
 
         /* ── Toolbar ── */
         .toolbar {
@@ -522,6 +524,17 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 Move to Pending
             </button>
+            <button class="bulk-btn bulk-btn-delete-forever" id="bulk-delete-forever-btn"
+                onclick="bulkPermanentDelete()" style="display:none"
+                title="Permanently delete all selected rejected groups">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14H6L5 6"/>
+                    <path d="M10 11v6M14 11v6"/>
+                    <path d="M9 6V4h6v2"/>
+                </svg>
+                Delete Forever
+            </button>
             <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 Clear
@@ -803,12 +816,17 @@
         function updateBulkBar() {
             const bar = document.getElementById('bulk-bar');
             const label = document.getElementById('selected-label');
+            const deleteForeverBtn = document.getElementById('bulk-delete-forever-btn');
             const n = selectedIds.size;
             if (n > 0) {
                 bar.classList.add('visible');
                 label.textContent = `${n} item${n !== 1 ? 's' : ''} selected`;
             } else {
                 bar.classList.remove('visible');
+            }
+            // Show "Delete Forever" only on the rejected tab
+            if (deleteForeverBtn) {
+                deleteForeverBtn.style.display = (currentTabName === 'rejected' && n > 0) ? 'inline-flex' : 'none';
             }
         }
 
@@ -859,6 +877,69 @@
             } catch (error) {
                 console.error('Bulk action error:', error);
                 showToast(error.message || 'Bulk action failed', 'error');
+            }
+        }
+
+        /* ── Bulk Permanent Delete ── */
+        async function bulkPermanentDelete() {
+            const n = selectedIds.size;
+            if (n === 0) return;
+            const confirmed = confirm(`⚠️ PERMANENT BULK DELETE\n\nYou are about to permanently delete ${n} group${n !== 1 ? 's' : ''}.\n\nThis action CANNOT be undone!`);
+            if (!confirmed) return;
+
+            const groupIds = Array.from(selectedIds);
+            showToast(`Permanently deleting ${n} group${n !== 1 ? 's' : ''}…`, 'info');
+
+            groupIds.forEach(id => {
+                const card = document.getElementById(`group-${id}`);
+                const row  = document.getElementById(`row-${id}`);
+                if (card) { card.style.opacity = '0.4'; card.style.pointerEvents = 'none'; }
+                if (row)  { row.style.opacity  = '0.4'; row.style.pointerEvents  = 'none'; }
+            });
+
+            try {
+                const response = await fetch('/wa/admin/bulkPermanentDelete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ groupIds })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || 'Bulk delete failed');
+
+                groupIds.forEach(id => {
+                    const card = document.getElementById(`group-${id}`);
+                    const row  = document.getElementById(`row-${id}`);
+                    if (card) { card.style.transform = 'scale(0.9)'; card.style.opacity = '0'; card.style.transition = 'all 0.25s'; }
+                    if (row)  { row.style.opacity = '0'; row.style.transition = 'opacity 0.25s'; }
+                });
+
+                groupsData[currentTabName] = groupsData[currentTabName].filter(g => !selectedIds.has(g._id));
+                selectedIds.clear();
+                updateTabCount(currentTabName, groupsData[currentTabName].length);
+
+                setTimeout(() => {
+                    groupIds.forEach(id => {
+                        const el1 = document.getElementById(`group-${id}`);
+                        const el2 = document.getElementById(`row-${id}`);
+                        if (el1) el1.remove();
+                        if (el2) el2.remove();
+                    });
+                    updateBulkBar();
+                    document.getElementById('count-label').textContent =
+                        `${groupsData[currentTabName].length} group${groupsData[currentTabName].length !== 1 ? 's' : ''}`;
+                    if (groupsData[currentTabName].length === 0) refreshCurrentTab();
+                }, 300);
+
+                showToast(result.message || `${n} group(s) permanently deleted`, 'success');
+            } catch (error) {
+                console.error('[WA BulkPermanentDelete]', error);
+                showToast('Bulk delete failed: ' + error.message, 'error');
+                groupIds.forEach(id => {
+                    const card = document.getElementById(`group-${id}`);
+                    const row  = document.getElementById(`row-${id}`);
+                    if (card) { card.style.opacity = '1'; card.style.pointerEvents = ''; }
+                    if (row)  { row.style.opacity  = '1'; row.style.pointerEvents  = ''; }
+                });
             }
         }
 
