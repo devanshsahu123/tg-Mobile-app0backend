@@ -8,7 +8,7 @@ const connectDB = require("./db/db.js");
 const cors = require("cors");
 const app = express();
 
-require("dotenv").config();
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 connectDB();
 
