@@ -46,8 +46,6 @@ app.get("/app-ads.txt", (req, res) => {
 
 app.use("/tg", teleRouter);
 app.use("/wa", waRouter);
-app.use("/cold-email", coldEmailRouter);
-app.use("/contact-number", contactNumberRouter);
 
 app.listen(port, () => console.log(`http://localhost:${port}`));
 

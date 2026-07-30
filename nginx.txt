@@ -1,45 +1,16 @@
 Edit Command - sudo nano /etc/nginx/sites-available/delhivery.conf
 Reload - sudo systemctl reload nginx
 
+
 # ----------------------------------------
-# 1. Server Block for delhivery.siyapaa.com
+# 1. Server Block for sahusaathi.com
 # ----------------------------------------
 server {
     listen 80;
-    server_name delhivery.siyapaa.com;
+    server_name sahusaathi.com www.sahusaathi.com siyapaa.com www.siyapaa.com;
 
-    # Backend API
-    location /api/ {
-        proxy_pass http://127.0.0.1:3001;
-        proxy_http_version 1.1;
-
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # Frontend
+    # Route all requests to port 3002
     location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-
-# ----------------------------------------
-# 2. Server Block for sahusaathi.com
-# ----------------------------------------
-server {
-    listen 80;
-    server_name sahusaathi.com www.sahusaathi.com;
-
-    # Route /tg and /wa (and their sub-paths) to port 3002
-    location ~ ^/(tg|wa) {
         proxy_pass http://127.0.0.1:3002;
         proxy_http_version 1.1;
 
@@ -48,10 +19,4 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-
-    # (Optional) If you have a default frontend for sahusaathi.com, add it here
-    # location / {
-    #     proxy_pass http://127.0.0.1:ANOTHER_PORT;
-    #     ...
-    # }
 }
