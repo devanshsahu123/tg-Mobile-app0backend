@@ -7,7 +7,7 @@ Reload - sudo systemctl reload nginx
 # ----------------------------------------
 server {
     listen 80;
-    server_name sahusaathi.com www.sahusaathi.com siyapaa.com www.siyapaa.com;
+    server_name siyapaa.com www.siyapaa.com;
 
     # Route all requests to port 3002
     location / {
