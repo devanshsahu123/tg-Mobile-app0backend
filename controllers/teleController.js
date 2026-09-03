@@ -57,7 +57,9 @@ const addGorup = async (req, res) => {
         const { error, value } = teleJoiValidation.addGroup.validate(req.body);
 
         if (error) throw new Error('Invalid Group URL! Please Try Again');
-        const normalizeURL = `https://telegram.me/${value.url.split('t.me/')[1]}`
+        const normalizeURL = value.url.includes('telegram.me')
+            ? value.url
+            : `https://telegram.me/${value.url.split('t.me/')[1]}`
 
         const existingGroups = await tgGroupModel.find({
             url: normalizeURL
