@@ -55,9 +55,9 @@ const fetchUrl = async (req, res) => {
 const addGorup = async (req, res) => {
     try {
         const { error, value } = teleJoiValidation.addGroup.validate(req.body);
-        if (error) throw new Error('Invalid Group Data! Try Again');
+        if (error) throw new Error('Invalid Group URL! Please Try Again');
         const isGroupExist = await tgGroupModel.findOne({
-            url: value.url
+            url: `https://telegram.me/${value.url.split('t.me/')[1]}`
         }).select('name');
 
         if (isGroupExist) throw new Error(`${isGroupExist.name} Group already Exist !`);
@@ -115,7 +115,8 @@ const myGroups = async (req, res) => {
 const getGroups = async (req, res) => {
     try {
         const { error, value } = teleJoiValidation.getGroups.validate(req.query);
-        if (error) throw new Error('Invalid user Key !');
+
+        if (error) throw new Error('Invalid user Key !' + error.message);
 
         const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
         const limit = parseInt(req.query.limit) || 10; // Default to 10 items per page if not provided
