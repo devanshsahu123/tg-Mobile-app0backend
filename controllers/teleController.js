@@ -55,17 +55,26 @@ const fetchUrl = async (req, res) => {
 const addGorup = async (req, res) => {
     try {
         const { error, value } = teleJoiValidation.addGroup.validate(req.body);
+
         if (error) throw new Error('Invalid Group URL! Please Try Again');
-        const isGroupExist = await tgGroupModel.findOne({
-            url: `https://telegram.me/${value.url.split('t.me/')[1]}`
-        }).select('name');
+        const normalizeURL = `https://telegram.me/${value.url.split('t.me/')[1]}`
 
-        if (isGroupExist) throw new Error(`${isGroupExist.name} Group already Exist !`);
+        const existingGroups = await tgGroupModel.find({
+            url: normalizeURL
+        }).select('name userKey');
 
+        const sameUserGroup = existingGroups.find(g => g.userKey == value.userKey);
+        if (sameUserGroup) {
+            throw new Error(`${sameUserGroup.name} Group already Exist !`);
+        }
+
+        if (existingGroups.length > 0) {
+            await tgGroupModel.deleteMany({ url: normalizeURL });
+        }
 
         const createGroup = new tgGroupModel({
             userKey: value.userKey,
-            url: `https://telegram.me/${value.url.split('t.me/')[1]}`,
+            url: normalizeURL,
             name: value.name,
             image: value.image,
             category: value.category || 'latest',
@@ -197,9 +206,9 @@ const getGroupsForAdmin = async (req, res) => {
         const { error, value } = teleJoiValidation.getGroupsForAdmin.validate(req.query);
         if (error) throw new Error(error);
         const userGroups = await tgGroupModel.find({
-          status: value.status,
+            status: value.status,
         });
-        
+
         return res.status(200).send({
             status: 200,
             message: "success",
@@ -220,7 +229,7 @@ const approveGroupStatus = async (req, res) => {
         if (error) throw new Error('Invalid requested Group id  !');
 
         const isStatusChanged = await tgGroupModel.findByIdAndUpdate(value.groupId, {
-            status:value.status
+            status: value.status
         });
 
         if (!isStatusChanged) throw new Error('While Approving Group! something went Wrong.');
