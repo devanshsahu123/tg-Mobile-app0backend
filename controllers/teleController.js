@@ -4,9 +4,13 @@ const cheerio = require('cheerio');
 const tgGroupModel = require("../models/tgGroups");
 const path = require('path');
 
+// Small helper — wait ms milliseconds
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 async function fetchTgGroupByUrl(url) {
     try {
         const response = await axios.get(url, {
+            timeout: 12000, // 12s — prevents hanging on slow responses
             headers: {
                 "User-Agent":
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
@@ -17,15 +21,34 @@ async function fetchTgGroupByUrl(url) {
 
         const $ = cheerio.load(response.data);
 
-        // Step 3: Extract group details using Cheerio selectors
-        const groupName = $('meta[property="og:title"]').attr("content"); // Group name
-        const groupDescription = $('meta[property="og:description"]').attr("content"); // Group description
-        const profilePic = $('meta[property="og:image"]').attr("content"); // Profile image URL
+        const groupName        = $('meta[property="og:title"]').attr("content");
+        const groupDescription = $('meta[property="og:description"]').attr("content");
+        const profilePic       = $('meta[property="og:image"]').attr("content");
 
-        if (groupName.includes('Telegram: Contact')) return false;
+        // Telegram returns this title when the group genuinely doesn't exist
+        if (!groupName) {
+            return { status: false, reason: 'No metadata returned (possibly rate-limited — retry later)' };
+        }
+        if (groupName.trim() === 'Telegram' || groupName.includes('Telegram: Contact')) {
+            return { status: false, reason: 'Group does not exist on Telegram' };
+        }
         return { status: true, name: groupName, description: groupDescription, image: profilePic };
     } catch (error) {
-        return { status: false }
+        let reason = error.message || 'Unknown error';
+        if (error.response) {
+            const s = error.response.status;
+            if (s === 429) reason = 'Rate limited by Telegram (429) — retry later';
+            else reason = `HTTP ${s} — ${error.response.statusText || 'Server error'}`;
+        } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+            reason = 'Request timed out (12s)';
+        } else if (error.code === 'ECONNREFUSED') {
+            reason = 'Connection refused';
+        } else if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') {
+            reason = 'Domain not found (DNS error)';
+        } else if (error.code === 'ERR_INVALID_URL') {
+            reason = 'Invalid URL format';
+        }
+        return { status: false, reason };
     }
 }
 
@@ -350,8 +373,134 @@ const bulkPermanentDelete = async (req, res) => {
     }
 };
 
+
+/**
+ * junkGroupUpdate
+ * Scans ALL groups in tgGroupModel, pings each Telegram URL in parallel,
+ * and returns { valid: [...], junk: [...] }.
+ *
+ * Query params:
+ *   ?autoMark=true  — also sets status: 2 (rejected) on all junk groups in DB
+ *
+ * GET /admin/junkGroupUpdate
+ */
+const junkGroupUpdate = async (req, res) => {
+  try {
+    const autoMark = req.query.autoMark === 'true';
+
+    // Fetch every group DB entry
+    const allGroups = await tgGroupModel
+      .find({})
+      .select('_id name url image status category');
+
+    if (allGroups.length === 0) {
+      return res.status(200).send({
+        status: 200,
+        message: 'No groups found in database',
+        data: { valid: [], junk: [], total: 0 }
+      });
+    }
+
+    const valid = [];
+    const junk  = [];
+    // 300ms gap between requests keeps us well under Telegram's rate limit
+    const REQUEST_DELAY_MS = 300;
+    // Transient failures (timeout, rate-limit) get one retry after 1s
+    const isTransient = reason =>
+        reason.includes('timeout') ||
+        reason.includes('Rate limited') ||
+        reason.includes('rate-limited') ||
+        reason.includes('No metadata');
+
+    for (const group of allGroups) {
+      // Polite delay to avoid triggering Telegram's rate limiter
+      await sleep(REQUEST_DELAY_MS);
+
+      let result = await fetchTgGroupByUrl(group.url);
+
+      // If it's a transient failure (timeout / rate-limit), wait 1s and retry once
+      if (result && !result.status && isTransient(result.reason || '')) {
+        await sleep(1000);
+        result = await fetchTgGroupByUrl(group.url);
+        if (result && !result.status) {
+          result.reason = `[Retried] ${result.reason}`;
+        }
+      }
+
+      const entry = {
+        _id:      group._id,
+        name:     group.name,
+        url:      group.url,
+        image:    group.image,
+        category: group.category,
+        dbStatus: group.status,
+      };
+
+      if (result && result.status === true) {
+        entry.liveName        = result.name;
+        entry.liveDescription = result.description;
+        entry.liveImage       = result.image || group.image;
+        valid.push(entry);
+      } else {
+        entry.reason = (result && result.reason) ? result.reason : 'Unknown error';
+        junk.push(entry);
+      }
+    }
+
+    // Bulk-update image (and name) for all live groups in one DB call
+    let imageUpdatedCount = 0;
+    if (valid.length > 0) {
+      const bulkOps = valid
+        .filter(g => g.liveImage && g.liveImage !== g.image) // only if image actually changed
+        .map(g => ({
+          updateOne: {
+            filter: { _id: g._id },
+            update: { $set: { image: g.liveImage, name: g.liveName || g.name } }
+          }
+        }));
+
+      if (bulkOps.length > 0) {
+        const bulkResult = await tgGroupModel.bulkWrite(bulkOps);
+        imageUpdatedCount = bulkResult.modifiedCount || 0;
+        // Reflect updated image in the response entry
+        valid.forEach(g => { if (g.liveImage) g.image = g.liveImage; });
+      }
+    }
+
+    // Auto-mark junk groups as rejected (status: 2) if requested
+    if (autoMark && junk.length > 0) {
+      const junkIds = junk.map(g => g._id);
+      await tgGroupModel.updateMany(
+        { _id: { $in: junkIds } },
+        { $set: { status: 2 } }
+      );
+      junk.forEach(g => { g.dbStatus = 2; });
+    }
+
+    return res.status(200).send({
+      status: 200,
+      message: `Scan complete — ${valid.length} valid, ${junk.length} junk, ${imageUpdatedCount} image(s) refreshed`,
+      data: {
+        total:              allGroups.length,
+        validCount:         valid.length,
+        junkCount:          junk.length,
+        imageUpdatedCount,
+        autoMarked:         autoMark,
+        valid,
+        junk
+      }
+    });
+  } catch (error) {
+    console.log('[junkGroupUpdate] Error:', error);
+    return res.status(400).send({
+      status: 400,
+      message: error.message
+    });
+  }
+}
+
 module.exports = {
-    fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin,
+  fetchUrl, addGorup, myGroups, getGroups, increaseViews, getGroupsForAdmin,
     approveGroupStatus, bulkUpdateStatus, renderAdminPage, permanentDeleteGroup,
-    bulkPermanentDelete
+    bulkPermanentDelete,junkGroupUpdate
 }

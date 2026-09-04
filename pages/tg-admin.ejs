@@ -335,6 +335,100 @@
         .toast-info    { background: #eff6ff; border: 1px solid #93c5fd; color: #1e40af; }
         @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* ── Junk Check Tab ── */
+        .junk-check-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;
+        }
+        .junk-check-header h2 { font-size: 1rem; font-weight: 700; }
+        .junk-section-title {
+            font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.06em; color: var(--text-muted);
+            margin: 1.5rem 0 0.75rem; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .validity-badge {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            padding: 0.2rem 0.6rem; border-radius: 9999px;
+            font-size: 0.7rem; font-weight: 700;
+        }
+        .badge-valid   { background: #d1fae5; color: #065f46; }
+        .badge-junk    { background: #fee2e2; color: #991b1b; }
+        .junk-list-table {
+            background: var(--bg-card); border-radius: 1rem;
+            box-shadow: var(--shadow-md); overflow: hidden; width: 100%;
+            margin-bottom: 1.5rem;
+        }
+        .junk-list-table table { width: 100%; border-collapse: collapse; }
+        .junk-list-table thead th {
+            padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem;
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--text-muted); background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+        }
+        .junk-list-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+        .junk-list-table tbody tr:last-child { border-bottom: none; }
+        .junk-list-table tbody tr:hover { background: #f8f9ff; }
+        .junk-list-table td { padding: 0.75rem 1rem; font-size: 0.8125rem; vertical-align: middle; }
+        .junk-scan-summary {
+            display: flex; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap;
+        }
+        .scan-stat {
+            flex: 1; min-width: 120px;
+            background: var(--bg-card); border-radius: 0.75rem;
+            padding: 1rem 1.25rem; box-shadow: var(--shadow);
+            text-align: center;
+        }
+        .scan-stat .stat-num { font-size: 1.75rem; font-weight: 800; margin-bottom: 0.25rem; }
+        .scan-stat .stat-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+        .stat-total { border-left: 4px solid var(--primary); }
+        .stat-valid { border-left: 4px solid var(--success); }
+        .stat-junk  { border-left: 4px solid var(--danger); }
+        /* ── Two-column Junk/Valid split ── */
+        .junk-cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-top: 0.25rem;
+        }
+        .junk-col {
+            background: var(--bg-card);
+            border-radius: 1rem;
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .junk-col-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.875rem 1.125rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .junk-col-header h3 {
+            font-size: 0.875rem; font-weight: 700;
+            display: flex; align-items: center; gap: 0.4rem;
+        }
+        .junk-col-body {
+            overflow-y: auto;
+            max-height: 520px;
+        }
+        .junk-col-body table { width: 100%; border-collapse: collapse; }
+        .junk-col-body thead th {
+            position: sticky; top: 0; z-index: 2;
+            padding: 0.625rem 0.875rem;
+            text-align: left; font-size: 0.7rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--text-muted); background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+        }
+        .junk-col-body tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+        .junk-col-body tbody tr:last-child { border-bottom: none; }
+        .junk-col-body tbody tr:hover { background: #f8f9ff; }
+        .junk-col-body td { padding: 0.625rem 0.875rem; font-size: 0.8rem; vertical-align: middle; }
+        .junk-col-empty {
+            padding: 2.5rem 1rem; text-align: center;
+            color: var(--text-muted); font-size: 0.875rem;
+        }
+        @media (max-width: 900px) { .junk-cols { grid-template-columns: 1fr; } }
         @media (max-width: 768px) {
             .layout { padding: 1rem; }
             .header { flex-direction: column; gap: 1rem; text-align: center; }
@@ -397,6 +491,9 @@
             </button>
             <button class="nav-tab" id="tab-rejected" onclick="switchTab('rejected', 2, event)">
                 ❌ Rejected <span class="badge" id="rejected-count">0</span>
+            </button>
+            <button class="nav-tab" id="tab-junk" onclick="switchToJunkTab(event)">
+                🔍 Junk Check
             </button>
         </nav>
 
@@ -461,6 +558,7 @@
         let groupsData = { pending: [], approved: [], rejected: [] };
         let selectedIds = new Set();
         let currentView = 'list'; // 'card' | 'list'
+        let currentJunkIds = []; // IDs from the last junk scan
 
         window.onload = () => loadGroups(0, 'pending');
 
@@ -886,6 +984,246 @@
             toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${escapeHtml(message)}</span>`;
             container.appendChild(toast);
             setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 3500);
+        }
+
+        /* ── Junk Check Tab ── */
+        function switchToJunkTab(event) {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.getElementById('toolbar').style.display = 'none';
+            document.getElementById('bulk-bar').classList.remove('visible');
+            clearSelection();
+            loadJunkCheck(false);
+        }
+
+        async function loadJunkCheck(autoMark) {
+            const contentArea = document.getElementById('content-area');
+            contentArea.innerHTML = `
+                <div class="loading-container">
+                    <div class="spinner"></div>
+                    <p style="margin-top:0.5rem">Scanning all group URLs against Telegram… this may take a moment.</p>
+                </div>`;
+
+            try {
+                const url = autoMark
+                    ? '/tg/admin/junkGroupUpdate?autoMark=true'
+                    : '/tg/admin/junkGroupUpdate';
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const result = await response.json();
+                if (result.status !== 200) throw new Error(result.message || 'Scan failed');
+                renderJunkResults(result.data, autoMark);
+                if (autoMark && result.data.junkCount > 0) {
+                    showToast(`${result.data.junkCount} junk group(s) marked as Rejected`, 'success');
+                }
+            } catch (error) {
+                console.error('[junkCheck]', error);
+                contentArea.innerHTML = `
+                    <div class="empty-state">
+                        <h3 style="color:var(--danger)">Scan Failed</h3>
+                        <p>${escapeHtml(error.message)}</p>
+                        <button class="btn btn-primary" style="margin-top:1rem" onclick="loadJunkCheck(false)">Try Again</button>
+                    </div>`;
+            }
+        }
+
+        function renderJunkResults(data, wasAutoMarked) {
+            const contentArea = document.getElementById('content-area');
+            const dbStatusLabel = s => s === 0 ? '⏳ Pending' : s === 1 ? '✅ Approved' : '❌ Rejected';
+            const dbStatusColor = s => s === 0 ? 'var(--warning)' : s === 1 ? 'var(--success)' : 'var(--danger)';
+
+            // Cache junk IDs from this scan so confirmAutoMark can use them directly
+            currentJunkIds = (data.junk || []).map(g => g._id);
+
+            const junkRows = (data.junk || []).map(g => `
+                <tr id="junk-row-${g._id}">
+                    <td>
+                        <div class="list-group-info">
+                            <img src="${g.image || 'https://via.placeholder.com/44?text=TG'}" class="list-thumb"
+                                 onerror="this.src='https://via.placeholder.com/44?text=TG'" alt="">
+                            <div>
+                                <div class="list-name">${escapeHtml(g.name)}</div>
+                                <div class="list-desc" style="font-size:0.7rem;color:#94a3b8">${escapeHtml(g.url)}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span style="font-size:0.75rem;font-weight:600;color:${dbStatusColor(g.dbStatus)}">${dbStatusLabel(g.dbStatus)}</span></td>
+                    <td>
+                        <span style="
+                            display:inline-block;
+                            background:#fff3e0;
+                            color:#b45309;
+                            border:1px solid #fcd34d;
+                            border-radius:6px;
+                            padding:0.2rem 0.55rem;
+                            font-size:0.7rem;
+                            font-weight:600;
+                            max-width:180px;
+                            white-space:normal;
+                            line-height:1.4;
+                        ">${escapeHtml(g.reason || 'Unknown error')}</span>
+                    </td>
+                    <td>
+                        <div class="list-actions">
+                            <a href="${g.url}" target="_blank" class="btn btn-ghost btn-sm" title="Open URL">🔗</a>
+                            <button class="btn btn-danger btn-sm" onclick="rejectSingleJunk('${g._id}', this)" title="Reject">Reject</button>
+                        </div>
+                    </td>
+                </tr>`).join('');
+
+            const validRows = (data.valid || []).map(g => `
+                <tr>
+                    <td>
+                        <div class="list-group-info">
+                            <img src="${g.image || 'https://via.placeholder.com/44?text=TG'}" class="list-thumb"
+                                 onerror="this.src='https://via.placeholder.com/44?text=TG'" alt="">
+                            <div>
+                                <div class="list-name">${escapeHtml(g.name)}</div>
+                                <div class="list-desc" style="font-size:0.7rem;color:#94a3b8">${escapeHtml(g.url)}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span style="font-size:0.75rem;font-weight:600;color:${dbStatusColor(g.dbStatus)}">${dbStatusLabel(g.dbStatus)}</span></td>
+                    <td><a href="${g.url}" target="_blank" class="btn btn-ghost btn-sm" title="Open URL">🔗</a></td>
+                </tr>`).join('');
+
+            contentArea.innerHTML = `
+                <div class="junk-check-header">
+                    <div>
+                        <h2>🔍 Group URL Validity Scan</h2>
+                        <p style="color:var(--text-muted);font-size:0.8125rem;margin-top:0.25rem">
+                            ${escapeHtml(wasAutoMarked
+                                ? `Scan complete. Junk groups were auto-marked as Rejected.`
+                                : `Results below. Use "Mark all Junk as Rejected" to update DB.`)}
+                        </p>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                        <button class="btn btn-outline" onclick="loadJunkCheck(false)">
+                            🔄 Re-scan
+                        </button>
+                    </div>
+                </div>
+
+                <div class="junk-scan-summary">
+                    <div class="scan-stat stat-total">
+                        <div class="stat-num">${data.total}</div>
+                        <div class="stat-label">Total Groups</div>
+                    </div>
+                    <div class="scan-stat stat-valid">
+                        <div class="stat-num" style="color:var(--success)">${data.validCount}</div>
+                        <div class="stat-label">✅ Valid</div>
+                    </div>
+                    <div class="scan-stat stat-junk">
+                        <div class="stat-num" style="color:var(--danger)">${data.junkCount}</div>
+                        <div class="stat-label">❌ Junk / Dead</div>
+                    </div>
+                    <div class="scan-stat" style="border-left:4px solid #8b5cf6">
+                        <div class="stat-num" style="color:#7c3aed">${data.imageUpdatedCount ?? 0}</div>
+                        <div class="stat-label">🖼️ Images Refreshed</div>
+                    </div>
+                </div>
+
+                <div class="junk-cols">
+
+                    <!-- ❌ Dead Column -->
+                    <div class="junk-col">
+                        <div class="junk-col-header">
+                            <h3><span class="validity-badge badge-junk">❌ Dead</span> ${data.junkCount} group${data.junkCount !== 1 ? 's' : ''}</h3>
+                            ${data.junkCount > 0 ? `<button class="btn btn-danger btn-sm" id="auto-mark-btn-col" onclick="confirmAutoMark()">
+                                🗑️ Mark all Rejected
+                            </button>` : ''}
+                        </div>
+                        <div class="junk-col-body">
+                            ${data.junkCount === 0
+                                ? `<div class="junk-col-empty">🎉 No dead groups found!</div>`
+                                : `<table>
+                                    <thead><tr><th>Group</th><th>DB Status</th><th>Fail Reason</th><th>Actions</th></tr></thead>
+                                    <tbody>${junkRows}</tbody>
+                                  </table>`
+                            }
+                        </div>
+                    </div>
+
+                    <!-- ✅ Live Column -->
+                    <div class="junk-col">
+                        <div class="junk-col-header">
+                            <h3><span class="validity-badge badge-valid">✅ Live</span> ${data.validCount} group${data.validCount !== 1 ? 's' : ''}</h3>
+                        </div>
+                        <div class="junk-col-body">
+                            ${data.validCount === 0
+                                ? `<div class="junk-col-empty">No live groups found.</div>`
+                                : `<table>
+                                    <thead><tr><th>Group</th><th>DB Status</th><th></th></tr></thead>
+                                    <tbody>${validRows}</tbody>
+                                  </table>`
+                            }
+                        </div>
+                    </div>
+
+                </div>`;
+        }
+
+        async function confirmAutoMark() {
+            if (!currentJunkIds || currentJunkIds.length === 0) {
+                showToast('No junk groups to reject. Run a scan first.', 'info');
+                return;
+            }
+            const confirmed = confirm(
+                '⚠️ Mark all Junk as Rejected\n\n'
+                + `This will set status = Rejected on ${currentJunkIds.length} dead/junk group(s).\n\nProceed?`
+            );
+            if (!confirmed) return;
+
+            const btn = document.getElementById('auto-mark-btn-col');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ Marking…'; }
+
+            try {
+                const response = await fetch('/tg/admin/bulkUpdateStatus', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ groupIds: currentJunkIds, status: 2 })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || 'Bulk update failed');
+
+                // Update DB Status badge on every junk row in the UI
+                currentJunkIds.forEach(id => {
+                    const row = document.getElementById(`junk-row-${id}`);
+                    if (row) {
+                        const statusCell = row.querySelectorAll('td')[1];
+                        if (statusCell) statusCell.innerHTML = `<span style="font-size:0.75rem;font-weight:600;color:var(--danger)">❌ Rejected</span>`;
+                    }
+                });
+
+                // Remove the button so it can't be clicked again
+                if (btn) btn.remove();
+
+                showToast(`${result.data?.modifiedCount ?? currentJunkIds.length} group(s) marked as Rejected`, 'success');
+                currentJunkIds = []; // Clear so button can't double-fire
+            } catch (err) {
+                if (btn) { btn.disabled = false; btn.textContent = '🗑️ Mark all Rejected'; }
+                showToast('Failed: ' + err.message, 'error');
+            }
+        }
+
+        async function rejectSingleJunk(groupId, btn) {
+            btn.disabled = true;
+            btn.textContent = '…';
+            try {
+                const response = await fetch('/tg/admin/updateStatus', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ groupId, status: 2 })
+                });
+                if (!response.ok) throw new Error('Update failed');
+                const row = document.getElementById(`junk-row-${groupId}`);
+                if (row) { row.style.opacity = '0'; row.style.transition = 'opacity 0.3s'; setTimeout(() => row.remove(), 300); }
+                showToast('Group marked as Rejected', 'success');
+            } catch (err) {
+                btn.disabled = false;
+                btn.textContent = 'Reject';
+                showToast('Failed: ' + err.message, 'error');
+            }
         }
 
         function escapeHtml(text) {

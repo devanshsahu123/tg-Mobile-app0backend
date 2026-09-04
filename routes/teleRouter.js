@@ -1,4 +1,4 @@
-const { addGorup, fetchUrl, myGroups, getGroups, approveGroupStatus, getGroupsForAdmin, increaseViews, bulkUpdateStatus, renderAdminPage, permanentDeleteGroup, bulkPermanentDelete } = require('../controllers/teleController');
+const { addGorup, fetchUrl, myGroups, getGroups, approveGroupStatus, getGroupsForAdmin, increaseViews, bulkUpdateStatus, renderAdminPage, permanentDeleteGroup, bulkPermanentDelete, junkGroupUpdate } = require('../controllers/teleController');
 const router = require('express').Router()
 
 router.get('/fetchUrl', fetchUrl);
@@ -18,6 +18,7 @@ router.post('/admin/bulkUpdateStatus', bulkUpdateStatus);
 router.get('/admin/page',renderAdminPage)
 router.delete('/admin/permanentDelete/:groupId', permanentDeleteGroup)
 router.post('/admin/bulkPermanentDelete', bulkPermanentDelete)
+router.get("/admin/junkGroupUpdate", junkGroupUpdate)
 
 
 
