@@ -44,8 +44,11 @@ app.get("/app-ads.txt", (req, res) => {
   res.sendFile(path.join(__dirname, "app-ads.txt"));
 });
 
+const callRouter = require("./routes/callRouter.js");
+
 app.use("/tg", teleRouter);
 app.use("/wa", waRouter);
+app.use("/call", callRouter);
 
 app.listen(port, () => console.log(`http://localhost:${port}`));
 
