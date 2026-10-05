@@ -1,21 +1,95 @@
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const VoiceTalkAuth = require("../models/voiceTalkAuth");
+
+let bcrypt = null;
+try {
+  bcrypt = require("bcryptjs");
+} catch (_) {}
+
+let jwt = null;
+try {
+  jwt = require("jsonwebtoken");
+} catch (_) {}
 
 const JWT_SECRET = process.env.JWT_SECRET || "voicetalk_auth_secret_key_2025";
 const TOKEN_EXPIRY = "30d";
 
+/**
+ * Universal secure password hashing (works with bcryptjs or built-in Node.js crypto)
+ */
+const hashPassword = async (password) => {
+  if (bcrypt) {
+    const salt = await bcrypt.genSalt(10);
+    return await bcrypt.hash(password, salt);
+  }
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `scrypt:${salt}:${hash}`;
+};
+
+/**
+ * Universal password verification
+ */
+const verifyPassword = async (password, storedHash) => {
+  if (storedHash.startsWith("scrypt:")) {
+    const [, salt, hash] = storedHash.split(":");
+    const testHash = crypto.scryptSync(password, salt, 64).toString("hex");
+    return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(testHash, "hex"));
+  }
+  if (bcrypt) {
+    return await bcrypt.compare(password, storedHash);
+  }
+  return false;
+};
+
+/**
+ * Universal token generation (works with jsonwebtoken or built-in HMAC-SHA256)
+ */
 const generateToken = (user) => {
-  return jwt.sign(
-    {
+  if (jwt) {
+    return jwt.sign(
+      {
+        userId: user._id,
+        email: user.email,
+        name: user.name,
+        authProvider: user.authProvider,
+      },
+      JWT_SECRET,
+      { expiresIn: TOKEN_EXPIRY }
+    );
+  }
+  const payload = Buffer.from(
+    JSON.stringify({
       userId: user._id,
       email: user.email,
       name: user.name,
       authProvider: user.authProvider,
-    },
-    JWT_SECRET,
-    { expiresIn: TOKEN_EXPIRY }
-  );
+      exp: Date.now() + 30 * 24 * 60 * 60 * 1000,
+    })
+  ).toString("base64url");
+  const signature = crypto.createHmac("sha256", JWT_SECRET).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+};
+
+/**
+ * Verify token
+ */
+const verifyToken = (token) => {
+  if (jwt) {
+    try {
+      return jwt.verify(token, JWT_SECRET);
+    } catch (_) {}
+  }
+  try {
+    const [payload, signature] = token.split(".");
+    const expectedSig = crypto.createHmac("sha256", JWT_SECRET).update(payload).digest("base64url");
+    if (signature !== expectedSig) return null;
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (data.exp && Date.now() > data.exp) return null;
+    return data;
+  } catch (_) {
+    return null;
+  }
 };
 
 /**
@@ -49,8 +123,7 @@ exports.register = async (req, res) => {
       });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await hashPassword(password);
 
     const newUser = await VoiceTalkAuth.create({
       email: normalizedEmail,
@@ -115,7 +188,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await verifyPassword(password, user.password);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -223,7 +296,13 @@ exports.getMe = async (req, res) => {
     }
 
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired token.",
+      });
+    }
 
     const user = await VoiceTalkAuth.findById(decoded.userId).select("-password");
     if (!user) {
