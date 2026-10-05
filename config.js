@@ -18,6 +18,10 @@ module.exports = {
     ANSWER: "/call/answer",
     CANCEL: "/call/cancel",
     END: "/call/end",
+    AUTH_REGISTER: "/call/auth/register",
+    AUTH_LOGIN: "/call/auth/login",
+    AUTH_GOOGLE: "/call/auth/google",
+    AUTH_ME: "/call/auth/me",
   },
 
   // Hold timeout (in milliseconds): How long caller request is held before timing out
