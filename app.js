@@ -12,7 +12,8 @@ require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 connectDB();
 
-const port = process.env.PORT || 3003;
+const config = require("./config");
+const port = config.PORT;
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "pages"));

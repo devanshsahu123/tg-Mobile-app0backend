@@ -1,10 +1,11 @@
 // 1-Click Random English Speaking Practice Matchmaker
 // Pure HTTP REST with 30s Long-Hold (Zero Polling, Zero WebSockets)
+const config = require("../config");
 
 let waitingPeer = null; // { id, offer, iceCandidates, res, timer, createdAt }
 const activeSessions = new Map(); // sessionId -> { callerRes, timer, createdAt }
 
-const HOLD_TIMEOUT_MS = 30 * 1000; // 30 seconds hold per request
+const HOLD_TIMEOUT_MS = config.MATCH_HOLD_TIMEOUT_MS || 30 * 1000;
 const SESSION_TTL_MS = 3 * 60 * 1000; // 3 minutes after matching to cleanup
 
 function generateSessionId() {
