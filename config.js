@@ -19,6 +19,8 @@ module.exports = {
     CANCEL: "/call/cancel",
     END: "/call/end",
     AUTH_REGISTER: "/call/auth/register",
+    AUTH_VERIFY_CODE: "/call/auth/verify-code",
+    AUTH_RESEND_CODE: "/call/auth/resend-code",
     AUTH_LOGIN: "/call/auth/login",
     AUTH_GOOGLE: "/call/auth/google",
     AUTH_ME: "/call/auth/me",
