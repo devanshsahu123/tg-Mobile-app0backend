@@ -5,10 +5,14 @@ module.exports = {
   // Domain and Base URL
   DOMAIN: process.env.DOMAIN || "https://sahusaathi.com",
   CALL_BASE_PATH: "/call",
+  CHESS_BASE_PATH: "/chess",
 
   // Full Signaling Base Endpoint
   get CALL_BASE_URL() {
     return `${this.DOMAIN}${this.CALL_BASE_PATH}`;
+  },
+  get CHESS_BASE_URL() {
+    return `${this.DOMAIN}${this.CHESS_BASE_PATH}`;
   },
 
   // Matchmaking API Endpoints
@@ -18,6 +22,13 @@ module.exports = {
     ANSWER: "/call/answer",
     CANCEL: "/call/cancel",
     END: "/call/end",
+    CHESS_HEALTH: "/chess/health",
+    CHESS_MATCH: "/chess/match",
+    CHESS_ANSWER: "/chess/answer",
+    CHESS_CANCEL: "/chess/cancel",
+    CHESS_MOVE: "/chess/move",
+    CHESS_MOVES: "/chess/moves",
+    CHESS_END: "/chess/end",
     AUTH_REGISTER: "/call/auth/register",
     AUTH_VERIFY_CODE: "/call/auth/verify-code",
     AUTH_RESEND_CODE: "/call/auth/resend-code",
