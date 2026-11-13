@@ -48,12 +48,15 @@ app.get("/app-ads.txt", (req, res) => {
 const callRouter = require("./routes/callRouter.js");
 const voiceTalkAuthRouter = require("./routes/voiceTalkAuthRouter.js");
 const chessRouter = require("./routes/chessRouter.js");
+const todoRouter = require("./routes/todoRouter.js");
 
 app.use("/tg", teleRouter);
 app.use("/wa", waRouter);
 app.use("/call", callRouter);
 app.use("/chess", chessRouter);
 app.use("/auth", voiceTalkAuthRouter);
+app.use("/to-do/api", todoRouter);
+app.use("/api/to-do", todoRouter);
 
 app.listen(port, () => console.log(`http://localhost:${port}`));
 
