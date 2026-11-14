@@ -40,6 +40,35 @@ const todoTaskSchema = new mongoose.Schema(
       enum: ["Low", "Medium", "High"],
       default: "Medium",
     },
+    category: {
+      type: String,
+      default: "Work",
+      trim: true,
+      index: true,
+    },
+    recurrence: {
+      type: {
+        type: String,
+        enum: ["None", "Daily", "Weekly", "Monthly", "Custom"],
+        default: "None",
+      },
+      days: [
+        {
+          type: String, // e.g. "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+        },
+      ],
+      interval: {
+        type: Number,
+        default: 1,
+      },
+    },
+    subtasks: [
+      {
+        id: { type: String },
+        title: { type: String, required: true },
+        completed: { type: Boolean, default: false },
+      },
+    ],
     status: {
       type: String,
       enum: ["In Progress", "Completed"],
@@ -102,6 +131,71 @@ todoTaskSchema.statics.getWeekBounds = function (dateInput) {
   const weekKey = `${year}-W${String(weekNumber).padStart(2, "0")}`;
 
   return { monday, sunday, weekNumber, year, weekKey };
+};
+
+// Calculate next recurrence occurrence date
+todoTaskSchema.statics.getNextOccurrence = function (currentDateInput, recurrence) {
+  if (!recurrence || recurrence.type === "None") return null;
+
+  const current = new Date(currentDateInput);
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  if (recurrence.type === "Daily") {
+    const next = new Date(current);
+    next.setDate(next.getDate() + (recurrence.interval || 1));
+    return next;
+  }
+
+  if (recurrence.type === "Monthly") {
+    const next = new Date(current);
+    next.setMonth(next.getMonth() + (recurrence.interval || 1));
+    return next;
+  }
+
+  if (recurrence.type === "Weekly" || recurrence.type === "Custom") {
+    const targetDays =
+      recurrence.days && recurrence.days.length > 0
+        ? recurrence.days
+        : [dayNames[current.getDay()]];
+
+    const targetDayIndices = targetDays
+      .map((d) => {
+        if (!d || typeof d !== "string") return -1;
+        const lower = d.trim().toLowerCase();
+        return dayNames.findIndex(
+          (dn) =>
+            dn.toLowerCase() === lower ||
+            lower.startsWith(dn.toLowerCase()) ||
+            dn.toLowerCase().startsWith(lower)
+        );
+      })
+      .filter((idx) => idx !== -1)
+      .sort((a, b) => a - b);
+
+    if (targetDayIndices.length === 0) {
+      const next = new Date(current);
+      next.setDate(next.getDate() + 7);
+      return next;
+    }
+
+    const currentDay = current.getDay();
+    // Find next day in the same week cycle
+    const nextDayThisWeek = targetDayIndices.find((idx) => idx > currentDay);
+    if (nextDayThisWeek !== undefined) {
+      const next = new Date(current);
+      next.setDate(next.getDate() + (nextDayThisWeek - currentDay));
+      return next;
+    }
+
+    // Wrap to first day of next week cycle
+    const firstDayNextWeek = targetDayIndices[0];
+    const daysUntilNext = 7 - currentDay + firstDayNextWeek;
+    const next = new Date(current);
+    next.setDate(next.getDate() + daysUntilNext);
+    return next;
+  }
+
+  return null;
 };
 
 // Pre-save hook to populate week metadata

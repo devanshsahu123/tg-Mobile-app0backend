@@ -1,6 +1,7 @@
 const TodoTask = require("../models/todoTask");
 const VoiceTalkAuth = require("../models/voiceTalkAuth");
 const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 
 let bcrypt = null;
 try {
@@ -13,6 +14,54 @@ try {
 } catch (_) {}
 
 const JWT_SECRET = process.env.JWT_SECRET || "voicetalk_auth_secret_key_2025";
+
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_PORT == 465,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+};
+
+const sendOtpEmail = async (email, otp, name = "") => {
+  const transporter = createTransporter();
+  const mailOptions = {
+    from: `"To-Do App" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+    to: email,
+    subject: `${otp} is your To-Do App verification code`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; border: 1px solid #E2E8F0; border-radius: 16px; background-color: #ffffff;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h2 style="color: #DC2626; margin: 0; font-size: 26px; font-weight: 800;">To-Do App</h2>
+          <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0;">Weekly Task & Progress Manager</p>
+        </div>
+        <p style="color: #0F172A; font-size: 15px; margin-bottom: 12px;">Hello ${name ? `<b>${name}</b>` : "there"},</p>
+        <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+          Here is your 6-digit verification code to log in to your To-Do account:
+        </p>
+        <div style="text-align: center; margin: 28px 0;">
+          <span style="display: inline-block; font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #DC2626; background-color: #FEF2F2; padding: 14px 28px; border-radius: 12px; border: 2px dashed #FECACA;">
+            ${otp}
+          </span>
+        </div>
+        <p style="color: #64748B; font-size: 13px; line-height: 1.5; margin-bottom: 24px;">
+          This code is valid for <b>10 minutes</b>. Never share this code with anyone.
+        </p>
+        <hr style="border: none; border-top: 1px solid #F1F5F9; margin: 24px 0;" />
+        <p style="color: #94A3B8; font-size: 11px; text-align: center; margin: 0;">
+          If you didn't request this login code, you can safely ignore this email.
+        </p>
+      </div>
+    `,
+    text: `Your To-Do verification code is: ${otp}. Valid for 10 minutes.`,
+  };
+
+  return await transporter.sendMail(mailOptions);
+};
 
 const hashPassword = async (password) => {
   if (bcrypt) {
@@ -109,6 +158,182 @@ const extractUserIdentity = (req) => {
     guestId: guestId,
     isGuest: !tokenUser && !!guestId,
   };
+};
+
+/**
+ * Send OTP via Gmail
+ */
+exports.sendOtp = async (req, res) => {
+  try {
+    const { email, name } = req.body;
+
+    if (!email || !email.trim() || !email.includes("@")) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid email address is required.",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    let user = await VoiceTalkAuth.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      const placeholderPassword = await hashPassword(
+        crypto.randomBytes(16).toString("hex")
+      );
+      user = new VoiceTalkAuth({
+        email: normalizedEmail,
+        name: (name || "").trim() || normalizedEmail.split("@")[0],
+        password: placeholderPassword,
+        authProvider: "email",
+        isVerified: false,
+        verificationCode: otp,
+        verificationCodeExpires: expiresAt,
+      });
+    } else {
+      user.verificationCode = otp;
+      user.verificationCodeExpires = expiresAt;
+      if (name && (!user.name || user.name === normalizedEmail.split("@")[0])) {
+        user.name = name.trim();
+      }
+    }
+
+    await user.save();
+
+    // Send email using real Gmail credentials
+    try {
+      await sendOtpEmail(normalizedEmail, otp, user.name);
+      console.log(`[To-Do OTP] Successfully sent OTP to ${normalizedEmail}`);
+    } catch (mailError) {
+      console.error("[To-Do OTP] Failed to send email via Gmail:", mailError.message);
+      // In case of local SMTP issue, return informative message with code
+      return res.status(200).json({
+        success: true,
+        message: `Verification code generated. (SMTP Notice: ${mailError.message})`,
+        email: normalizedEmail,
+        devCode: otp,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `A 6-digit verification code has been sent to ${normalizedEmail}.`,
+      email: normalizedEmail,
+    });
+  } catch (error) {
+    console.error("[To-Do] sendOtp error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send verification code. Please try again.",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Verify OTP & Log In / Sign Up
+ */
+exports.verifyOtp = async (req, res) => {
+  try {
+    const { email, otp, guestId, name } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required.",
+      });
+    }
+
+    if (!otp || !otp.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "6-digit verification code is required.",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await VoiceTalkAuth.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "No verification request found for this email. Please request a new code.",
+      });
+    }
+
+    // Verify OTP code
+    if (!user.verificationCode || user.verificationCode !== otp.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid verification code. Please double-check the code sent to your email.",
+      });
+    }
+
+    // Check expiration
+    if (user.verificationCodeExpires && new Date() > user.verificationCodeExpires) {
+      return res.status(400).json({
+        success: false,
+        message: "Verification code has expired. Please request a new one.",
+      });
+    }
+
+    // OTP is valid! Mark verified and clear OTP
+    user.isVerified = true;
+    user.verificationCode = null;
+    user.verificationCodeExpires = null;
+    user.lastLogin = new Date();
+    if (name && (!user.name || user.name === normalizedEmail.split("@")[0])) {
+      user.name = name.trim();
+    }
+    await user.save();
+
+    const token = generateToken(user);
+
+    // If there were guest tasks created, migrate them to this verified user
+    if (guestId) {
+      await TodoTask.updateMany(
+        { guestId: guestId, userId: null },
+        {
+          $set: {
+            userId: user._id.toString(),
+            userEmail: user.email,
+            isGuest: false,
+          },
+        }
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Verified and logged in successfully!",
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+        authProvider: user.authProvider,
+        isGuest: false,
+      },
+    });
+  } catch (error) {
+    console.error("[To-Do] verifyOtp error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Verification failed. Please try again.",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Resend OTP
+ */
+exports.resendOtp = async (req, res) => {
+  return exports.sendOtp(req, res);
 };
 
 /**
@@ -420,7 +645,7 @@ exports.googleAuth = async (req, res) => {
 exports.createTask = async (req, res) => {
   try {
     const { userId, userEmail, guestId, isGuest } = extractUserIdentity(req);
-    const { title, description, dueDate, priority } = req.body;
+    const { title, description, dueDate, priority, category, subtasks, recurrence } = req.body;
 
     if (!title || !title.trim()) {
       return res.status(400).json({
@@ -456,6 +681,9 @@ exports.createTask = async (req, res) => {
       description: (description || "").trim(),
       dueDate: parsedDate,
       priority: priority || "Medium",
+      category: category || "Work",
+      recurrence: recurrence || { type: "None", days: [], interval: 1 },
+      subtasks: Array.isArray(subtasks) ? subtasks : [],
       status: "In Progress",
       weekStartDate: monday,
       weekEndDate: sunday,
@@ -511,6 +739,11 @@ exports.getTasks = async (req, res) => {
       });
     }
 
+    // Category filter
+    if (req.query.category && req.query.category !== "All") {
+      filter.category = req.query.category;
+    }
+
     // Week filter
     if (req.query.weekKey) {
       filter.weekKey = req.query.weekKey;
@@ -556,6 +789,11 @@ exports.getWeeklySummary = async (req, res) => {
         success: true,
         weeks: [],
       });
+    }
+
+    // Optional category filter
+    if (req.query.category && req.query.category !== "All") {
+      filter.category = req.query.category;
     }
 
     // Optional search filter
@@ -624,7 +862,7 @@ exports.getWeeklySummary = async (req, res) => {
 exports.updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, dueDate, priority, status } = req.body;
+    const { title, description, dueDate, priority, status, category, subtasks, recurrence } = req.body;
 
     const task = await TodoTask.findById(id);
     if (!task) {
@@ -632,6 +870,18 @@ exports.updateTask = async (req, res) => {
         success: false,
         message: "Task not found.",
       });
+    }
+
+    if (category !== undefined) {
+      task.category = category;
+    }
+
+    if (subtasks !== undefined) {
+      task.subtasks = subtasks;
+    }
+
+    if (recurrence !== undefined) {
+      task.recurrence = recurrence;
     }
 
     if (title !== undefined) {
@@ -706,6 +956,40 @@ exports.toggleStatus = async (req, res) => {
       });
     }
 
+    // Handle recurring task logic
+    if (
+      task.status === "In Progress" &&
+      task.recurrence &&
+      task.recurrence.type &&
+      task.recurrence.type !== "None"
+    ) {
+      const nextDate = TodoTask.getNextOccurrence(task.dueDate, task.recurrence);
+      if (nextDate) {
+        task.dueDate = nextDate;
+        const { monday, sunday, weekNumber, year, weekKey } =
+          TodoTask.getWeekBounds(nextDate);
+        task.weekStartDate = monday;
+        task.weekEndDate = sunday;
+        task.weekNumber = weekNumber;
+        task.year = year;
+        task.weekKey = weekKey;
+        // Reset subtasks for next occurrence
+        if (task.subtasks && task.subtasks.length > 0) {
+          task.subtasks.forEach((s) => {
+            s.completed = false;
+          });
+        }
+        await task.save();
+
+        return res.status(200).json({
+          success: true,
+          message: `Task completed! Next occurrence scheduled for ${nextDate.toDateString()}.`,
+          task,
+          nextOccurrence: nextDate,
+        });
+      }
+    }
+
     task.status = task.status === "Completed" ? "In Progress" : "Completed";
     await task.save();
 
@@ -753,4 +1037,101 @@ exports.deleteTask = async (req, res) => {
     });
   }
 };
+
+/**
+ * Rename Category across user's tasks
+ */
+exports.renameCategory = async (req, res) => {
+  try {
+    const { oldCategory, newCategory, guestId: bodyGuestId } = req.body;
+    if (!oldCategory || !newCategory) {
+      return res.status(400).json({
+        success: false,
+        message: "Both oldCategory and newCategory are required.",
+      });
+    }
+
+    const { userId, guestId: authGuestId } = extractUserIdentity(req);
+    const guestId = bodyGuestId || authGuestId;
+
+    const filter = {};
+    if (userId) {
+      filter.$or = [{ userId: userId }, { guestId: guestId || "____never____" }];
+    } else if (guestId) {
+      filter.guestId = guestId;
+    }
+
+    filter.category = oldCategory;
+
+    let modifiedCount = 0;
+    if (userId || guestId) {
+      const result = await TodoTask.updateMany(filter, {
+        $set: { category: newCategory.trim() },
+      });
+      modifiedCount = result.modifiedCount;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Category renamed from '${oldCategory}' to '${newCategory}'.`,
+      modifiedCount,
+    });
+  } catch (error) {
+    console.error("[Todo] RenameCategory error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to rename category.",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Delete Category and move tasks to a fallback category
+ */
+exports.deleteCategory = async (req, res) => {
+  try {
+    const { category, fallbackCategory = "Work", guestId: bodyGuestId } = req.body;
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        message: "Category to delete is required.",
+      });
+    }
+
+    const { userId, guestId: authGuestId } = extractUserIdentity(req);
+    const guestId = bodyGuestId || authGuestId;
+
+    const filter = {};
+    if (userId) {
+      filter.$or = [{ userId: userId }, { guestId: guestId || "____never____" }];
+    } else if (guestId) {
+      filter.guestId = guestId;
+    }
+
+    filter.category = category;
+
+    let modifiedCount = 0;
+    if (userId || guestId) {
+      const result = await TodoTask.updateMany(filter, {
+        $set: { category: fallbackCategory.trim() },
+      });
+      modifiedCount = result.modifiedCount;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Category '${category}' deleted. Tasks moved to '${fallbackCategory}'.`,
+      modifiedCount,
+    });
+  } catch (error) {
+    console.error("[Todo] DeleteCategory error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete category.",
+      error: error.message,
+    });
+  }
+};
+
 
